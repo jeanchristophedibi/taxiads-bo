@@ -7,7 +7,7 @@ import type {
   ScreenRepository,
   UpdateScreenInput,
 } from '../../domain/repositories/screen-repository';
-import type { ScreenStatus } from '../../domain/entities/screen';
+import type { ScreenMapItem, ScreenMapMeta, ScreenStatus } from '../../domain/entities/screen';
 import type { PaginatedScreensDto, ScreenDto } from '../schemas/screen-dto';
 import { toScreenEntity } from '../schemas/screen-dto';
 
@@ -106,6 +106,76 @@ export class HttpScreenRepository implements ScreenRepository {
       () => this.httpClient.request({ path: `/bo/screens/${id}/emergency/${type}`, method: 'POST', body: payload }).then(() => undefined),
       'Failed to trigger emergency',
     );
+  }
+
+  async getMap(params?: {
+    search?: string;
+    status?: ScreenStatus;
+    locationKey?: string;
+    campaignKey?: string;
+    playlistKey?: string;
+    staleAfterSeconds?: number;
+  }) {
+    return wrap(async () => {
+      const response = await this.httpClient.request<{
+        data: Array<{
+          key: string;
+          name: string;
+          slug: string;
+          screen_code: string;
+          status: ScreenStatus;
+          is_live: boolean;
+          coordinates: { lat: number; lng: number; source: string } | null;
+          last_ping_at: string | null;
+          last_telemetry_at: string | null;
+          battery: number | null;
+          network_type: string | null;
+          network_ssid: string | null;
+          playlist: { key: string; value: string } | null;
+          locations: { key: string; value: string }[];
+        }>;
+        meta: {
+          total: number;
+          stale_after_seconds: number;
+          generated_at: string;
+        };
+      }>({
+        path: '/bo/screens/map',
+        query: {
+          search: params?.search,
+          status: params?.status,
+          location_key: params?.locationKey,
+          campaign_key: params?.campaignKey,
+          playlist_key: params?.playlistKey,
+          stale_after_seconds: params?.staleAfterSeconds,
+        },
+      });
+
+      const data: ScreenMapItem[] = response.data.map((item) => ({
+        key: item.key,
+        name: item.name,
+        slug: item.slug,
+        screenCode: item.screen_code,
+        status: item.status,
+        isLive: item.is_live,
+        coordinates: item.coordinates,
+        lastPingAt: item.last_ping_at,
+        lastTelemetryAt: item.last_telemetry_at,
+        battery: item.battery,
+        networkType: item.network_type,
+        networkSsid: item.network_ssid,
+        playlist: item.playlist,
+        locations: item.locations ?? [],
+      }));
+
+      const meta: ScreenMapMeta = {
+        total: response.meta.total,
+        staleAfterSeconds: response.meta.stale_after_seconds,
+        generatedAt: response.meta.generated_at,
+      };
+
+      return { data, meta };
+    }, 'Failed to fetch screens map');
   }
 
   /* ── Bulk actions ──────────────────────────────────────────────────────── */

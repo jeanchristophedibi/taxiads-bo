@@ -14,3 +14,26 @@ export interface Screen {
   version: number;
   shouldRestart: boolean;
 }
+
+export interface ScreenMapItem {
+  key: string;
+  name: string;
+  slug: string;
+  screenCode: string;
+  status: ScreenStatus;
+  isLive: boolean;
+  coordinates: { lat: number; lng: number; source: string } | null;
+  lastPingAt: string | null;
+  lastTelemetryAt: string | null;
+  battery: number | null;
+  networkType: string | null;
+  networkSsid: string | null;
+  playlist: { key: string; value: string } | null;
+  locations: { key: string; value: string }[];
+}
+
+export interface ScreenMapMeta {
+  total: number;
+  staleAfterSeconds: number;
+  generatedAt: string;
+}

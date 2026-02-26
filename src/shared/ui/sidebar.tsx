@@ -38,6 +38,12 @@ const icons = {
       <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
     </svg>
   ),
+  map: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2V6z" />
+      <path d="M9 4v14M15 6v14" />
+    </svg>
+  ),
   advertisers: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 21h18M3 7v14M21 7v14M6 21V11m4 10V11m4 10V11m4 10V11M3 7l9-4 9 4" />
@@ -93,6 +99,7 @@ const NAV: NavGroup[] = [
       { href: '/campagnes',  label: 'Campagnes',    icon: icons.campaigns },
       { href: '/playlists',  label: 'Playlists',    icon: icons.playlists },
       { href: '/play-logs',  label: 'Historique',   icon: icons.history },
+      { href: '/carte',      label: 'Carte',        icon: icons.map },
     ],
   },
   {

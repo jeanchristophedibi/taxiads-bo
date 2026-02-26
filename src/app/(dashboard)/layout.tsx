@@ -26,9 +26,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!(await isTokenValid(token))) redirect('/api/auth/clear');
 
   return (
-    <div className="flex min-h-screen bg-apple-bg">
+    <div className="dashboard-shell flex min-h-screen bg-apple-bg">
       <Sidebar />
-      <main className="flex-1 min-w-0" style={{ marginLeft: 'var(--sidebar-w)' }}>
+      <main className="dashboard-content flex-1 min-w-0" style={{ marginLeft: 'var(--sidebar-w)' }}>
         <GlobalSearchBar />
         <div className="px-8 py-8 max-w-screen-xl mx-auto">
           {children}

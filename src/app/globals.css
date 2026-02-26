@@ -227,6 +227,41 @@ select.input {
   border-right: 0.5px solid rgba(255, 255, 255, 0.05);
 }
 
+/* ─── Notifications drawer ─────────────────────────────────────────────── */
+@keyframes notification-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes notification-drawer-in {
+  0% { opacity: 0; transform: translate3d(22px, 0, 0) scale(0.985); }
+  70% { opacity: 1; transform: translate3d(-3px, 0, 0) scale(1.002); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes dashboard-float-in {
+  from { transform: translateX(0) scale(1); }
+  to { transform: translateX(-7px) scale(0.994); }
+}
+
+.notification-overlay {
+  animation: notification-overlay-in 220ms var(--ease-apple);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.notification-drawer {
+  animation: notification-drawer-in 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dashboard-shell {
+  transition: transform 260ms var(--ease-apple), filter 260ms var(--ease-apple);
+  transform-origin: center;
+}
+
+body.notifications-open .dashboard-shell {
+  animation: dashboard-float-in 220ms var(--ease-apple) forwards;
+  filter: saturate(0.92) brightness(0.96);
+}
+
 /* ─── Toast ──────────────────────────────────────────────────────────────── */
 @keyframes toast-in {
   from { opacity: 0; transform: translate3d(12px, -8px, 0) scale(0.94); }
