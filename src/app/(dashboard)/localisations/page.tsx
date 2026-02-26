@@ -17,38 +17,44 @@ export default function LocalisationsPage() {
   const isActive = status === 'all' ? undefined : status === 'active';
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Localisations</h1>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          + Nouvelle localisation
+    <div className="space-y-6">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Localisations</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Points géographiques utilisés pour le ciblage des campagnes</p>
+        </div>
+        <button onClick={openCreate} className="btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Nouvelle localisation
         </button>
       </div>
 
-      <div className="flex gap-3">
-        <input
-          type="text"
-          placeholder="Rechercher…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-        />
-
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value as 'all' | 'active' | 'inactive')}
-          className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="all">Tous</option>
-          <option value="active">Actives</option>
-          <option value="inactive">Inactives</option>
-        </select>
-      </div>
-
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="card overflow-hidden">
+        <div className="toolbar">
+          <div className="relative flex-1 max-w-xs">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" /><path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Rechercher une localisation…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input pl-9"
+            />
+          </div>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as 'all' | 'active' | 'inactive')}
+            className="input w-auto"
+          >
+            <option value="all">Tous les statuts</option>
+            <option value="active">Actives</option>
+            <option value="inactive">Inactives</option>
+          </select>
+        </div>
         <LocationsTable search={search || undefined} isActive={isActive} onEdit={openEdit} />
       </div>
 

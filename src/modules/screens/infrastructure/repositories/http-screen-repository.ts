@@ -1,9 +1,23 @@
 import { AppError } from '@/shared/domain/app-error';
 import { err, ok } from '@/shared/domain/result';
 import type { HttpClient } from '@/shared/infrastructure/http/http-client';
-import type { ScreenRepository } from '../../domain/repositories/screen-repository';
+import type {
+  CustomEmergencyPayload,
+  EmergencyType,
+  ScreenRepository,
+  UpdateScreenInput,
+} from '../../domain/repositories/screen-repository';
+import type { ScreenMapItem, ScreenMapMeta, ScreenStatus } from '../../domain/entities/screen';
 import type { PaginatedScreensDto, ScreenDto } from '../schemas/screen-dto';
 import { toScreenEntity } from '../schemas/screen-dto';
+
+const wrap = async <T>(fn: () => Promise<T>, message: string) => {
+  try {
+    return ok(await fn());
+  } catch (error) {
+    return err(error instanceof AppError ? error : new AppError('UNKNOWN', message, error));
+  }
+};
 
 export class HttpScreenRepository implements ScreenRepository {
   constructor(private readonly httpClient: HttpClient) {}
@@ -42,12 +56,157 @@ export class HttpScreenRepository implements ScreenRepository {
     }
   }
 
-  async restart(id: string) {
+  async update(id: string, data: UpdateScreenInput) {
     try {
-      await this.httpClient.request({ path: `/bo/screens/${id}/restart`, method: 'POST' });
-      return ok(undefined);
+      const response = await this.httpClient.request<{ data: ScreenDto }>({
+        path: `/bo/screens/${id}`,
+        method: 'PUT',
+        body: data,
+      });
+      return ok(toScreenEntity(response.data));
     } catch (error) {
-      return err(error instanceof AppError ? error : new AppError('UNKNOWN', 'Failed to restart screen', error));
+      return err(error instanceof AppError ? error : new AppError('UNKNOWN', 'Failed to update screen', error));
     }
+  }
+
+  async delete(id: string) {
+    return wrap(() => this.httpClient.request({ path: `/bo/screens/${id}`, method: 'DELETE' }).then(() => undefined), 'Failed to delete screen');
+  }
+
+  /* ── Single actions ────────────────────────────────────────────────────── */
+
+  async refresh(id: string) {
+    return wrap(() => this.httpClient.request({ path: `/bo/screens/${id}/refresh`, method: 'POST' }).then(() => undefined), 'Failed to refresh screen');
+  }
+
+  async restart(id: string) {
+    return wrap(() => this.httpClient.request({ path: `/bo/screens/${id}/restart`, method: 'POST' }).then(() => undefined), 'Failed to restart screen');
+  }
+
+  async assignPlaylist(id: string, playlistKey: string) {
+    return wrap(
+      () => this.httpClient.request({ path: `/bo/screens/${id}/assign-playlist`, method: 'POST', body: { playlist_key: playlistKey } }).then(() => undefined),
+      'Failed to assign playlist',
+    );
+  }
+
+  async unassignPlaylist(id: string) {
+    return wrap(() => this.httpClient.request({ path: `/bo/screens/${id}/unassign-playlist`, method: 'POST' }).then(() => undefined), 'Failed to unassign playlist');
+  }
+
+  async updateStatus(id: string, status: ScreenStatus) {
+    return wrap(
+      () => this.httpClient.request({ path: `/bo/screens/${id}/status`, method: 'POST', body: { status } }).then(() => undefined),
+      'Failed to update status',
+    );
+  }
+
+  async emergency(id: string, type: EmergencyType, payload?: CustomEmergencyPayload) {
+    return wrap(
+      () => this.httpClient.request({ path: `/bo/screens/${id}/emergency/${type}`, method: 'POST', body: payload }).then(() => undefined),
+      'Failed to trigger emergency',
+    );
+  }
+
+  async getMap(params?: {
+    search?: string;
+    status?: ScreenStatus;
+    locationKey?: string;
+    campaignKey?: string;
+    playlistKey?: string;
+    staleAfterSeconds?: number;
+  }) {
+    return wrap(async () => {
+      const response = await this.httpClient.request<{
+        data: Array<{
+          key: string;
+          name: string;
+          slug: string;
+          screen_code: string;
+          status: ScreenStatus;
+          is_live: boolean;
+          coordinates: { lat: number; lng: number; source: string } | null;
+          last_ping_at: string | null;
+          last_telemetry_at: string | null;
+          battery: number | null;
+          network_type: string | null;
+          network_ssid: string | null;
+          playlist: { key: string; value: string } | null;
+          locations: { key: string; value: string }[];
+        }>;
+        meta: {
+          total: number;
+          stale_after_seconds: number;
+          generated_at: string;
+        };
+      }>({
+        path: '/bo/screens/map',
+        query: {
+          search: params?.search,
+          status: params?.status,
+          location_key: params?.locationKey,
+          campaign_key: params?.campaignKey,
+          playlist_key: params?.playlistKey,
+          stale_after_seconds: params?.staleAfterSeconds,
+        },
+      });
+
+      const data: ScreenMapItem[] = response.data.map((item) => ({
+        key: item.key,
+        name: item.name,
+        slug: item.slug,
+        screenCode: item.screen_code,
+        status: item.status,
+        isLive: item.is_live,
+        coordinates: item.coordinates,
+        lastPingAt: item.last_ping_at,
+        lastTelemetryAt: item.last_telemetry_at,
+        battery: item.battery,
+        networkType: item.network_type,
+        networkSsid: item.network_ssid,
+        playlist: item.playlist,
+        locations: item.locations ?? [],
+      }));
+
+      const meta: ScreenMapMeta = {
+        total: response.meta.total,
+        staleAfterSeconds: response.meta.stale_after_seconds,
+        generatedAt: response.meta.generated_at,
+      };
+
+      return { data, meta };
+    }, 'Failed to fetch screens map');
+  }
+
+  /* ── Bulk actions ──────────────────────────────────────────────────────── */
+
+  async bulkRefresh(keys: string[]) {
+    return wrap(() => this.httpClient.request({ path: '/bo/screens/bulk/refresh', method: 'POST', body: { screen_keys: keys } }).then(() => undefined), 'Failed to bulk refresh');
+  }
+
+  async bulkRestart(keys: string[]) {
+    return wrap(() => this.httpClient.request({ path: '/bo/screens/bulk/restart', method: 'POST', body: { screen_keys: keys } }).then(() => undefined), 'Failed to bulk restart');
+  }
+
+  async bulkAssignPlaylist(keys: string[], playlistKey: string) {
+    return wrap(
+      () => this.httpClient.request({ path: '/bo/screens/bulk/assign-playlist', method: 'POST', body: { screen_keys: keys, playlist_key: playlistKey } }).then(() => undefined),
+      'Failed to bulk assign playlist',
+    );
+  }
+
+  async bulkUnassignPlaylist(keys: string[]) {
+    return wrap(() => this.httpClient.request({ path: '/bo/screens/bulk/unassign-playlist', method: 'POST', body: { screen_keys: keys } }).then(() => undefined), 'Failed to bulk unassign playlist');
+  }
+
+  async bulkDelete(keys: string[]) {
+    return wrap(() => this.httpClient.request({ path: '/bo/screens/bulk/delete', method: 'POST', body: { screen_keys: keys } }).then(() => undefined), 'Failed to bulk delete');
+  }
+
+  async bulkEmergency(keys: string[], type: EmergencyType) {
+    return wrap(
+      () => this.httpClient.request({ path: '/bo/screens/bulk/emergency', method: 'POST', body: { screen_keys: keys, type } }).then(() => undefined),
+      'Failed to bulk emergency',
+    );
   }
 }

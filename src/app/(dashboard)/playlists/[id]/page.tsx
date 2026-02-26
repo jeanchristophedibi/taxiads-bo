@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import { usePlaylistDetailQuery } from '@/modules/playlists/presentation/hooks/use-playlist-detail-query';
 import { usePlaylistItemsQuery } from '@/modules/playlists/presentation/hooks/use-playlist-items';
 
@@ -14,6 +15,21 @@ export default function PlaylistDetailPage() {
 
   const detail = detailResult && detailResult.ok ? detailResult.value : null;
   const items = itemsData?.items ?? [];
+  const [search, setSearch] = useState('');
+
+  const filteredItems = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return items;
+    return items.filter((item) => {
+      const values = [
+        item.title ?? '',
+        item.creative?.value ?? '',
+        item.page?.value ?? '',
+        item.layout?.value ?? '',
+      ].map((v) => v.toLowerCase());
+      return values.some((v) => v.includes(query));
+    });
+  }, [items, search]);
 
   if (loadingDetail) {
     return <div className="text-sm text-slate-400">Chargement du détail playlist…</div>;
@@ -57,13 +73,25 @@ export default function PlaylistDetailPage() {
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
           <h2 className="text-sm font-semibold text-slate-900">Items de la playlist</h2>
+          <div className="relative mt-3 max-w-sm">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" /><path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Filtrer les items…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input pl-9"
+            />
+          </div>
         </div>
 
         {loadingItems ? (
           <div className="px-5 py-10 text-sm text-slate-400">Chargement des items…</div>
         ) : itemsError ? (
           <div className="px-5 py-10 text-sm text-red-500">Impossible de charger les items.</div>
-        ) : items.length === 0 ? (
+        ) : filteredItems.length === 0 ? (
           <div className="px-5 py-10 text-sm text-slate-400">Aucun item dans cette playlist.</div>
         ) : (
           <table className="w-full">
@@ -78,7 +106,7 @@ export default function PlaylistDetailPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <tr key={item.id}>
                   <td className="px-5 py-3 text-sm text-slate-700">{item.title || '—'}</td>
                   <td className="px-5 py-3 text-sm text-slate-500">{item.creative?.value || '—'}</td>

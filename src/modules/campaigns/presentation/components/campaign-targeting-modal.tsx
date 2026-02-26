@@ -79,6 +79,7 @@ export function CampaignTargetingModal({ campaign, onClose }: Props) {
               <div className="md:col-span-4">
                 <label className="block text-xs text-slate-500 mb-1">Localisation</label>
                 <SelectField
+                  instanceId={`targeting-location-${index}`}
                   options={locations}
                   value={row.location_id}
                   onChange={(value) => setRow(index, 'location_id', value)}

@@ -27,6 +27,7 @@ export default function CreativesPage() {
         />
 
         <SelectField
+          instanceId="creatives-campaign"
           options={campaigns}
           value={campaignId}
           onChange={setCampaignId}

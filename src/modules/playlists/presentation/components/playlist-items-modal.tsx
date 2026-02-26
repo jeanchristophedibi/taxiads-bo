@@ -142,15 +142,15 @@ export function PlaylistItemsModal({ playlist, onClose }: Props) {
             <div className="space-y-3">
               <div>
                 <label className="block text-xs text-slate-500 mb-1">Page</label>
-                <SelectField options={pages} value={form.page_id} onChange={(v) => set('page_id', v)} isLoading={loadingPages} placeholder="Sélectionner une page" />
+                <SelectField instanceId="pli-page" options={pages} value={form.page_id} onChange={(v) => set('page_id', v)} isLoading={loadingPages} placeholder="Sélectionner une page" />
               </div>
               <div>
                 <label className="block text-xs text-slate-500 mb-1">Layout</label>
-                <SelectField options={layouts} value={form.layout_id} onChange={(v) => set('layout_id', v)} isLoading={loadingLayouts} placeholder="Sélectionner un layout" />
+                <SelectField instanceId="pli-layout" options={layouts} value={form.layout_id} onChange={(v) => set('layout_id', v)} isLoading={loadingLayouts} placeholder="Sélectionner un layout" />
               </div>
               <div>
                 <label className="block text-xs text-slate-500 mb-1">Créative (optionnel)</label>
-                <SelectField options={creatives} value={form.creative_id} onChange={(v) => set('creative_id', v)} isLoading={loadingCreatives} placeholder="Sélectionner une créative" />
+                <SelectField instanceId="pli-creative" options={creatives} value={form.creative_id} onChange={(v) => set('creative_id', v)} isLoading={loadingCreatives} placeholder="Sélectionner une créative" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
