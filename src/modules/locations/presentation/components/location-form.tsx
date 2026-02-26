@@ -50,63 +50,73 @@ export function LocationForm({ location, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
-      <div className="w-full max-w-2xl bg-white rounded-xl border border-slate-200 shadow-xl">
-        <div className="px-5 py-4 border-b border-slate-200">
-          <h2 className="text-lg font-semibold text-slate-900">{location ? 'Modifier la localisation' : 'Nouvelle localisation'}</h2>
+    <div className="modal-overlay">
+      <div className="modal-sheet w-full max-w-2xl">
+        <div className="modal-header">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">{location ? 'Modifier la localisation' : 'Nouvelle localisation'}</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--apple-label)' }}>
+              {location ? `ID : ${location.id}` : 'Remplissez les informations ci-dessous'}
+            </p>
+          </div>
+          <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-apple text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
-        <form onSubmit={onSubmit} className="p-5 space-y-4">
-          <div className="space-y-1">
-            <label className="block text-sm text-slate-500">Nom</label>
-            <input
-              required
-              value={form.name}
-              onChange={(e) => set('name', e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+        <form onSubmit={onSubmit}>
+          <div className="modal-body space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Nom <span className="text-red-500">*</span></label>
+              <input
+                required
+                value={form.name}
+                onChange={(e) => set('name', e.target.value)}
+                className="input"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Ville</label>
+                <input value={form.city} onChange={(e) => set('city', e.target.value)} className="input" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Pays</label>
+                <input value={form.country} onChange={(e) => set('country', e.target.value)} className="input" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Type</label>
+                <input value={form.type} onChange={(e) => set('type', e.target.value)} className="input" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Latitude</label>
+                <input value={form.latitude} onChange={(e) => set('latitude', e.target.value)} className="input" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Longitude</label>
+                <input value={form.longitude} onChange={(e) => set('longitude', e.target.value)} className="input" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Rayon (m)</label>
+                <input value={form.radius_m} onChange={(e) => set('radius_m', e.target.value)} className="input" />
+              </div>
+            </div>
+
+            <label className="inline-flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={form.is_active} onChange={(e) => set('is_active', e.target.checked)} className="rounded" />
+              Localisation active
+            </label>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-1">
-              <label className="block text-sm text-slate-500">Ville</label>
-              <input value={form.city} onChange={(e) => set('city', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-sm text-slate-500">Pays</label>
-              <input value={form.country} onChange={(e) => set('country', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-sm text-slate-500">Type</label>
-              <input value={form.type} onChange={(e) => set('type', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-1">
-              <label className="block text-sm text-slate-500">Latitude</label>
-              <input value={form.latitude} onChange={(e) => set('latitude', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-sm text-slate-500">Longitude</label>
-              <input value={form.longitude} onChange={(e) => set('longitude', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-sm text-slate-500">Rayon (m)</label>
-              <input value={form.radius_m} onChange={(e) => set('radius_m', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-            </div>
-          </div>
-
-          <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-            <input type="checkbox" checked={form.is_active} onChange={(e) => set('is_active', e.target.checked)} />
-            Localisation active
-          </label>
-
-          <div className="pt-2 flex items-center justify-end gap-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
-              Annuler
-            </button>
-            <button type="submit" disabled={isPending || !form.name.trim()} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-60">
+          <div className="modal-footer">
+            <button type="button" onClick={onClose} className="btn-secondary">Annuler</button>
+            <button type="submit" disabled={isPending || !form.name.trim()} className="btn-primary">
               {isPending ? 'Enregistrement…' : location ? 'Modifier' : 'Créer'}
             </button>
           </div>

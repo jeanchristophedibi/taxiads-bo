@@ -8,5 +8,6 @@ export const makeScreensModule = () => {
 
   return {
     listScreens: new ListScreens(screenRepository),
+    screenRepository,
   };
 };

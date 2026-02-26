@@ -33,7 +33,7 @@ const setAuthUserCookie = (name: string, email: string) => {
   window.dispatchEvent(new Event('auth-user-updated'));
 };
 
-export function ProfileSettingsPanel({ showTitle = true }: { showTitle?: boolean }) {
+export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: { showTitle?: boolean; sectionFilter?: string }) {
   const toast = useToast();
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -51,6 +51,12 @@ export function ProfileSettingsPanel({ showTitle = true }: { showTitle?: boolean
   const [disableForm, setDisableForm] = useState({ current_password: '', otp_code: '' });
   const [recoveryForm, setRecoveryForm] = useState({ current_password: '', otp_code: '' });
   const [freshRecoveryCodes, setFreshRecoveryCodes] = useState<string[]>([]);
+  const normalizedFilter = sectionFilter.trim().toLowerCase();
+
+  const isSectionVisible = (label: string): boolean => {
+    if (!normalizedFilter) return true;
+    return label.toLowerCase().includes(normalizedFilter);
+  };
 
   const headers = useMemo(() => {
     const token = getAuthToken();
@@ -235,64 +241,71 @@ export function ProfileSettingsPanel({ showTitle = true }: { showTitle?: boolean
         <div className="text-sm text-slate-400">Chargement…</div>
       ) : (
         <>
-          <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-900">Informations personnelles</h2>
-            <form onSubmit={updateProfile} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Nom</label>
-                <input value={profileForm.name} onChange={(e) => setProfileForm((f) => ({ ...f, name: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Email</label>
-                <input type="email" value={profileForm.email} onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-              </div>
-              <div className="md:col-span-2 text-right">
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Enregistrer</button>
-              </div>
-            </form>
-          </section>
+          {isSectionVisible('Informations personnelles') && (
+            <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-slate-900">Informations personnelles</h2>
+              <form onSubmit={updateProfile} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">Nom</label>
+                  <input value={profileForm.name} onChange={(e) => setProfileForm((f) => ({ ...f, name: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">Email</label>
+                  <input type="email" value={profileForm.email} onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                </div>
+                <div className="md:col-span-2 text-right">
+                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Enregistrer</button>
+                </div>
+              </form>
+            </section>
+          )}
 
-          <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-900">Avatar</h2>
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full overflow-hidden bg-slate-100 border border-slate-200">
-                {profile.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={profile.avatar_url} alt="avatar" className="h-full w-full object-cover" />
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center text-xs text-slate-400">Aucun</div>
-                )}
+          {isSectionVisible('Avatar') && (
+            <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-slate-900">Avatar</h2>
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-full overflow-hidden bg-slate-100 border border-slate-200">
+                  {profile.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profile.avatar_url} alt="avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-xs text-slate-400">Aucun</div>
+                  )}
+                </div>
+                <div className="flex-1 flex items-center gap-2">
+                  <input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)} className="text-xs" />
+                  <button type="button" onClick={uploadAvatar} disabled={!avatarFile} className="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs disabled:opacity-50">Uploader</button>
+                  <button type="button" onClick={deleteAvatar} className="px-3 py-2 border border-red-300 text-red-600 rounded-lg text-xs">Supprimer</button>
+                </div>
               </div>
-              <div className="flex-1 flex items-center gap-2">
-                <input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)} className="text-xs" />
-                <button type="button" onClick={uploadAvatar} disabled={!avatarFile} className="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs disabled:opacity-50">Uploader</button>
-                <button type="button" onClick={deleteAvatar} className="px-3 py-2 border border-red-300 text-red-600 rounded-lg text-xs">Supprimer</button>
-              </div>
-            </div>
-          </section>
+            </section>
+          )}
 
-          <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-900">Mot de passe</h2>
-            <form onSubmit={changePassword} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Actuel</label>
-                <input type="password" value={passwordForm.current_password} onChange={(e) => setPasswordForm((f) => ({ ...f, current_password: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Nouveau</label>
-                <input type="password" value={passwordForm.password} onChange={(e) => setPasswordForm((f) => ({ ...f, password: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Confirmation</label>
-                <input type="password" value={passwordForm.password_confirmation} onChange={(e) => setPasswordForm((f) => ({ ...f, password_confirmation: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-              </div>
-              <div className="md:col-span-3 text-right">
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Changer</button>
-              </div>
-            </form>
-          </section>
+          {isSectionVisible('Mot de passe') && (
+            <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-slate-900">Mot de passe</h2>
+              <form onSubmit={changePassword} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">Actuel</label>
+                  <input type="password" value={passwordForm.current_password} onChange={(e) => setPasswordForm((f) => ({ ...f, current_password: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">Nouveau</label>
+                  <input type="password" value={passwordForm.password} onChange={(e) => setPasswordForm((f) => ({ ...f, password: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">Confirmation</label>
+                  <input type="password" value={passwordForm.password_confirmation} onChange={(e) => setPasswordForm((f) => ({ ...f, password_confirmation: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                </div>
+                <div className="md:col-span-3 text-right">
+                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Changer</button>
+                </div>
+              </form>
+            </section>
+          )}
 
-          <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
+          {isSectionVisible('Authentification 2FA') && (
+            <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
             <h2 className="text-sm font-semibold text-slate-900">Authentification 2FA</h2>
             <p className="text-xs text-slate-500">
               Statut: <span className={profile.two_factor.enabled ? 'text-emerald-600 font-medium' : 'text-slate-600 font-medium'}>{profile.two_factor.enabled ? 'activée' : 'désactivée'}</span>
@@ -353,7 +366,12 @@ export function ProfileSettingsPanel({ showTitle = true }: { showTitle?: boolean
                 </div>
               </div>
             )}
-          </section>
+            </section>
+          )}
+
+          {normalizedFilter && !isSectionVisible('Informations personnelles') && !isSectionVisible('Avatar') && !isSectionVisible('Mot de passe') && !isSectionVisible('Authentification 2FA') && (
+            <div className="text-sm text-slate-500">Aucune section ne correspond au filtre.</div>
+          )}
         </>
       )}
     </div>

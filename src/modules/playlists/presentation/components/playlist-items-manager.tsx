@@ -111,6 +111,7 @@ export function PlaylistItemsManager() {
       <div className="bg-white rounded-xl border border-slate-200 p-4">
         <label className="block text-xs text-slate-500 mb-1">Playlist</label>
         <SelectField
+          instanceId="mgr-playlist"
           options={playlists}
           value={playlistId}
           onChange={(v) => {
@@ -163,15 +164,15 @@ export function PlaylistItemsManager() {
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs text-slate-500 mb-1">Page</label>
-                  <SelectField options={pages} value={form.page_id} onChange={(v) => set('page_id', v)} isLoading={loadingPages} placeholder="Sélectionner une page" />
+                  <SelectField instanceId="mgr-page" options={pages} value={form.page_id} onChange={(v) => set('page_id', v)} isLoading={loadingPages} placeholder="Sélectionner une page" />
                 </div>
                 <div>
                   <label className="block text-xs text-slate-500 mb-1">Layout</label>
-                  <SelectField options={layouts} value={form.layout_id} onChange={(v) => set('layout_id', v)} isLoading={loadingLayouts} placeholder="Sélectionner un layout" />
+                  <SelectField instanceId="mgr-layout" options={layouts} value={form.layout_id} onChange={(v) => set('layout_id', v)} isLoading={loadingLayouts} placeholder="Sélectionner un layout" />
                 </div>
                 <div>
                   <label className="block text-xs text-slate-500 mb-1">Créative (optionnel)</label>
-                  <SelectField options={creatives} value={form.creative_id} onChange={(v) => set('creative_id', v)} isLoading={loadingCreatives} placeholder="Sélectionner une créative" />
+                  <SelectField instanceId="mgr-creative" options={creatives} value={form.creative_id} onChange={(v) => set('creative_id', v)} isLoading={loadingCreatives} placeholder="Sélectionner une créative" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>

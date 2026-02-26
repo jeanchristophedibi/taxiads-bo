@@ -2,194 +2,252 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-type NavLink = { href: string; label: string };
-type NavItem = { label: string; children: NavLink[] };
+/* ─── Icons ─────────────────────────────────────────────────────────────── */
+const icons = {
+  dashboard: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  ),
+  screens: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="13" rx="2" /><path d="M8 21h8M12 17v4" />
+    </svg>
+  ),
+  creatives: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" />
+      <path d="m21 15-5-5L5 21" />
+    </svg>
+  ),
+  campaigns: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11l19-9-9 19-2-8-8-2z" />
+    </svg>
+  ),
+  playlists: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18M3 12h12M3 18h12M16 16l5-4-5-4v8z" />
+    </svg>
+  ),
+  history: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
+    </svg>
+  ),
+  advertisers: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 21h18M3 7v14M21 7v14M6 21V11m4 10V11m4 10V11m4 10V11M3 7l9-4 9 4" />
+    </svg>
+  ),
+  locations: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+      <circle cx="12" cy="9" r="2.5" />
+    </svg>
+  ),
+  chevronRight: (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18l6-6-6-6" />
+    </svg>
+  ),
+  chevronDown: (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  ),
+  user: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+    </svg>
+  ),
+  logout: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+    </svg>
+  ),
+  profile: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+    </svg>
+  ),
+};
 
-const NAV: NavItem[] = [
+/* ─── Nav definition ─────────────────────────────────────────────────────── */
+type NavLink = { href: string; label: string; icon: React.ReactNode };
+type NavGroup = { label: string; icon?: React.ReactNode; children: NavLink[] };
 
+const NAV: NavGroup[] = [
   {
     label: 'Dashboard',
-    children: [{ href: '/dashboard', label: 'Dashboard' }],
+    children: [{ href: '/dashboard', label: 'Dashboard', icon: icons.dashboard }],
   },
-  
   {
     label: 'Diffusion',
     children: [
-      { href: '/ecrans', label: 'Écrans' },
-      { href: '/creatives', label: 'Créatives' },
-      { href: '/campagnes', label: 'Campagnes' },
-      { href: '/playlists', label: 'Playlists' },
-      { href: '/play-logs', label: 'Historique des diffusions' },
+      { href: '/ecrans',     label: 'Écrans',       icon: icons.screens },
+      { href: '/creatives',  label: 'Créatives',    icon: icons.creatives },
+      { href: '/campagnes',  label: 'Campagnes',    icon: icons.campaigns },
+      { href: '/playlists',  label: 'Playlists',    icon: icons.playlists },
+      { href: '/play-logs',  label: 'Historique',   icon: icons.history },
     ],
   },
   {
     label: 'Ressources',
     children: [
-      { href: '/annonceurs', label: 'Annonceurs' },
-      { href: '/localisations', label: 'Localisations' },
+      { href: '/annonceurs',    label: 'Annonceurs',    icon: icons.advertisers },
+      { href: '/localisations', label: 'Localisations', icon: icons.locations },
     ],
   },
-
 ];
 
-function getAuthUser(): { name: string; email: string } | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(/(?:^|; )auth_user=([^;]*)/);
-  if (!match) return null;
-  try {
-    return JSON.parse(decodeURIComponent(match[1]));
-  } catch {
-    return null;
-  }
-}
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
+const isActivePath = (pathname: string, href: string) =>
+  pathname === href || pathname.startsWith(`${href}/`);
 
-const isActivePath = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
-
+/* ─── Component ──────────────────────────────────────────────────────────── */
 export function Sidebar() {
   const pathname = usePathname();
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
-  const initiallyOpenGroups = useMemo(() => {
-    const open: Record<string, boolean> = {};
-    NAV.forEach((group) => {
-      open[group.label] = group.children.some((child) => isActivePath(pathname, child.href));
-    });
-    return open;
-  }, [pathname]);
-
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(initiallyOpenGroups);
+  useEffect(() => { setIsProfileOpen(false); }, [pathname]);
 
   useEffect(() => {
-    setUser(getAuthUser());
-  }, [pathname]);
-
-  useEffect(() => {
-    const onAuthUserUpdated = () => setUser(getAuthUser());
-    window.addEventListener('auth-user-updated', onAuthUserUpdated);
-    return () => window.removeEventListener('auth-user-updated', onAuthUserUpdated);
-  }, []);
-
-  useEffect(() => {
-    setOpenGroups((prev) => ({ ...initiallyOpenGroups, ...prev }));
-  }, [initiallyOpenGroups]);
-
-  useEffect(() => {
-    setIsProfileOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    const onMouseDown = (event: MouseEvent) => {
-      if (!profileMenuRef.current) return;
-      if (!profileMenuRef.current.contains(event.target as Node)) {
-        setIsProfileOpen(false);
-      }
+    const onMouseDown = (e: MouseEvent) => {
+      if (!profileMenuRef.current?.contains(e.target as Node)) setIsProfileOpen(false);
     };
-
     document.addEventListener('mousedown', onMouseDown);
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, []);
 
-  const toggleGroup = (label: string) => {
-    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
-  };
-
   return (
-    <aside className="fixed inset-y-0 left-0 w-56 bg-slate-900 flex flex-col z-40">
-      <div className="px-5 py-5 border-b border-slate-800">
-        <span className="text-white font-semibold text-sm">TaxiAds BO</span>
+    <aside
+      className="fixed inset-y-0 left-0 flex flex-col z-40 sidebar-glass"
+      style={{ width: 'var(--sidebar-w)' }}
+    >
+      {/* ── Logo ─────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2.5 px-5 h-16 border-b border-white/5 shrink-0">
+        <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3" />
+            <rect x="9" y="11" width="14" height="10" rx="2" />
+            <circle cx="12" cy="16" r="1" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-white text-sm font-semibold leading-tight">TaxiAds</p>
+          <p className="text-slate-500 text-[10px] leading-tight font-medium tracking-wide uppercase">Back Office</p>
+        </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-auto">
-        {NAV.map((group, groupIndex) => {
-          const groupActive = group.children.some((child) => isActivePath(pathname, child.href));
-          const groupOpen = !!openGroups[group.label];
+      {/* ── Nav ──────────────────────────────────────────────────────── */}
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        {NAV.map((group) => {
 
+          /* Single-item group → direct link */
           if (group.children.length === 1) {
             const only = group.children[0];
             const active = isActivePath(pathname, only.href);
             return (
               <Link
-                key={`group-single-${group.label}-${groupIndex}`}
+                key={group.label}
                 href={only.href}
-                className={`flex items-center px-3 py-2 rounded-md text-sm transition-colors ${
-                  active ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                className={`animate-nav-item flex items-center gap-3 px-3 py-2.5 rounded-apple text-sm font-medium transition-all duration-200 ease-apple ${
+                  active
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/50 hover:text-white/80 hover:bg-white/5'
                 }`}
               >
-                {group.label}
+                <span className={active ? 'text-white' : 'text-white/40'}>{only.icon}</span>
+                {only.label}
+                {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/70" />}
               </Link>
             );
           }
 
+          /* Multi-item group → collapsible */
           return (
-            <div key={`group-${group.label}-${groupIndex}`} className="rounded-md overflow-hidden">
-              <button
-                onClick={() => toggleGroup(group.label)}
-                className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
-                  groupActive ? 'bg-slate-800 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <span>{group.label}</span>
-                <span className={`text-xs transition-transform ${groupOpen ? 'rotate-90' : ''}`}>▶</span>
-              </button>
+            <div key={group.label}>
+              {/* Section label */}
+              <p className="px-3 pt-5 pb-1.5 text-[10px] font-semibold text-white/25 uppercase tracking-widest select-none">
+                {group.label}
+              </p>
 
-              {groupOpen && (
-                <div className="bg-slate-950/40 border-l border-slate-700 ml-3">
-                  {group.children.map((child, childIndex) => {
-                    const childActive = isActivePath(pathname, child.href);
-                    return (
-                      <Link
-                        key={`child-${group.label}-${child.href}-${childIndex}`}
-                        href={child.href}
-                        className={`block px-3 py-2 text-xs transition-colors ${
-                          childActive ? 'text-blue-300 bg-slate-800/40' : 'text-slate-400 hover:text-white hover:bg-slate-800/30'
-                        }`}
-                      >
-                        {child.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
+              {group.children.map((child, idx) => {
+                const active = isActivePath(pathname, child.href);
+                return (
+                  <Link
+                    key={child.href}
+                    href={child.href}
+                    className={`animate-nav-item flex items-center gap-3 px-3 py-2 rounded-apple text-sm transition-all duration-200 ease-apple ${
+                      active
+                        ? 'bg-white/10 text-white font-medium'
+                        : 'text-white/50 hover:text-white/80 hover:bg-white/5 font-normal'
+                    }`}
+                    style={{ animationDelay: `${idx * 40}ms` }}
+                  >
+                    <span className={`shrink-0 ${active ? 'text-white' : 'text-white/35'}`}>
+                      {child.icon}
+                    </span>
+                    <span className="truncate">{child.label}</span>
+                    {active && (
+                      <span className="ml-auto w-1 h-4 rounded-full bg-white/60 shrink-0" />
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           );
         })}
       </nav>
 
-      <div className="px-4 py-4 border-t border-slate-800">
+      {/* ── Profile ──────────────────────────────────────────────────── */}
+      <div className="px-3 pb-4 shrink-0 border-t border-white/5 pt-3">
         <div className="relative" ref={profileMenuRef}>
           <button
             type="button"
             onClick={() => setIsProfileOpen((v) => !v)}
-            className="w-full rounded-lg border border-slate-700 bg-slate-800/60 p-3 text-left hover:bg-slate-800 transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors duration-150 group"
           >
-            {/* <p className="text-xs text-slate-400 mb-1">Profil connecté</p> */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-white truncate">{user?.name || 'Utilisateur'}</p>
-                {/* <p className="text-xs text-slate-400 truncate">{user?.email || '—'}</p> */}
-              </div>
-              <span className={`text-xs text-slate-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`}>▼</span>
+            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+              <span className="text-slate-300">{icons.user}</span>
             </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-medium text-slate-200 truncate leading-tight">
+                Compte
+              </p>
+              <p className="text-[11px] text-slate-500 truncate leading-tight mt-0.5">
+                Options
+              </p>
+            </div>
+            <span className={`text-slate-500 group-hover:text-slate-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`}>
+              {icons.chevronDown}
+            </span>
           </button>
 
+          {/* Dropdown menu */}
           {isProfileOpen && (
-            <div className="absolute bottom-full left-0 mb-2 w-full rounded-lg border border-slate-700 bg-slate-900 shadow-xl overflow-hidden">
+            <div className="absolute bottom-full left-0 mb-2 w-full rounded-xl border border-white/10 bg-slate-900 shadow-2xl overflow-hidden"
+              style={{ boxShadow: '0 -8px 32px rgba(0,0,0,0.4)' }}>
               <Link
                 href="/profile"
-                className="block px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 transition-colors"
+                className="flex items-center gap-2.5 px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
               >
-                Mon profil
+                {icons.profile}
+                <span>Mon profil</span>
               </Link>
-              <form action="/api/logout" method="post" className="border-t border-slate-700">
+              <div className="border-t border-white/5" />
+              <form action="/api/logout" method="post">
                 <button
                   type="submit"
-                  className="w-full px-3 py-2 text-left text-xs font-medium text-red-300 hover:bg-red-500/10 transition-colors"
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-sm text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
                 >
-                  Déconnexion
+                  {icons.logout}
+                  <span>Déconnexion</span>
                 </button>
               </form>
             </div>

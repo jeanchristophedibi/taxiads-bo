@@ -8,7 +8,7 @@ import { CampaignTargetingModal } from '@/modules/campaigns/presentation/compone
 import type { Campaign, CampaignStatus } from '@/modules/campaigns/domain/entities/campaign';
 
 const STATUSES: { value: CampaignStatus | ''; label: string }[] = [
-  { value: '', label: 'Tous' },
+  { value: '', label: 'Tous les statuts' },
   { value: 'active', label: 'Actif' },
   { value: 'scheduled', label: 'Planifié' },
   { value: 'draft', label: 'Brouillon' },
@@ -40,22 +40,18 @@ export default function CampagnesPage() {
   const updateUrl = useMemo(() => {
     return (next: { search?: string; status?: string; page?: number }) => {
       const params = new URLSearchParams(searchParams.toString());
-
       if (next.search !== undefined) {
         if (next.search.trim()) params.set('search', next.search.trim());
         else params.delete('search');
       }
-
       if (next.status !== undefined) {
         if (next.status) params.set('status', next.status);
         else params.delete('status');
       }
-
       if (next.page !== undefined) {
         if (next.page > 1) params.set('page', String(next.page));
         else params.delete('page');
       }
-
       const query = params.toString();
       router.replace(query ? `${pathname}?${query}` : pathname);
     };
@@ -67,7 +63,6 @@ export default function CampagnesPage() {
       setPage(1);
       updateUrl({ search: searchInput, page: 1 });
     }, 350);
-
     return () => window.clearTimeout(handle);
   }, [searchInput, updateUrl]);
 
@@ -82,61 +77,63 @@ export default function CampagnesPage() {
     updateUrl({ page: nextPage });
   };
 
-  const openCreate = () => setModal({ open: true, campaign: undefined });
-  const openEdit = (campaign: Campaign) => setModal({ open: true, campaign });
-  const closeModal = () => setModal({ open: false });
-
-  const openTargeting = (campaign: Campaign) => setTargeting({ open: true, campaign });
-  const closeTargeting = () => setTargeting({ open: false });
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Campagnes</h1>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          + Nouvelle campagne
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Campagnes</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Gérez et suivez vos campagnes publicitaires</p>
+        </div>
+        <button onClick={() => setModal({ open: true })} className="btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Nouvelle campagne
         </button>
       </div>
 
-      <div className="flex gap-3">
-        <input
-          type="text"
-          placeholder="Rechercher…"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-        />
-        <select
-          value={status}
-          onChange={(e) => onStatusChange(e.target.value as CampaignStatus | '')}
-          className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          {STATUSES.map((s) => (
-            <option key={s.value} value={s.value}>{s.label}</option>
-          ))}
-        </select>
-      </div>
+      {/* Card with toolbar + table */}
+      <div className="card overflow-hidden">
+        <div className="toolbar">
+          <div className="relative flex-1 max-w-xs">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" /><path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Rechercher une campagne…"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="input pl-9"
+            />
+          </div>
+          <select
+            value={status}
+            onChange={(e) => onStatusChange(e.target.value as CampaignStatus | '')}
+            className="input w-auto"
+          >
+            {STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+        </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <CampaignsTable
           search={search || undefined}
           status={status || undefined}
           page={page}
           onPageChange={onPageChange}
-          onEdit={openEdit}
-          onTargeting={openTargeting}
+          onEdit={(c) => setModal({ open: true, campaign: c })}
+          onTargeting={(c) => setTargeting({ open: true, campaign: c })}
         />
       </div>
 
       {modal.open && (
-        <CampaignForm campaign={modal.campaign} onClose={closeModal} />
+        <CampaignForm campaign={modal.campaign} onClose={() => setModal({ open: false })} />
       )}
-
       {targeting.open && targeting.campaign && (
-        <CampaignTargetingModal campaign={targeting.campaign} onClose={closeTargeting} />
+        <CampaignTargetingModal campaign={targeting.campaign} onClose={() => setTargeting({ open: false })} />
       )}
     </div>
   );

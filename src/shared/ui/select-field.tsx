@@ -9,14 +9,16 @@ interface Props {
   onChange: (value: string) => void;
   placeholder?: string;
   isLoading?: boolean;
+  instanceId?: string;
 }
 
-export function SelectField({ options, value, onChange, placeholder = '— Sélectionner —', isLoading }: Props) {
+export function SelectField({ options, value, onChange, placeholder = '— Sélectionner —', isLoading, instanceId }: Props) {
   const selectOptions = options.map((o) => ({ value: o.key, label: o.value }));
   const selected = selectOptions.find((o) => o.value === value) ?? null;
 
   return (
     <ReactSelect
+      instanceId={instanceId}
       options={selectOptions}
       value={selected}
       onChange={(opt) => onChange(opt?.value ?? '')}

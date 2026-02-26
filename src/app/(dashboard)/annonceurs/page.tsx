@@ -14,26 +14,35 @@ export default function AnnonceursPage() {
   const closeModal = () => setModal({ open: false });
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Annonceurs</h1>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          + Nouvel annonceur
+    <div className="space-y-6">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Annonceurs</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Gérez vos annonceurs et leurs campagnes associées</p>
+        </div>
+        <button onClick={openCreate} className="btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Nouvel annonceur
         </button>
       </div>
 
-      <input
-        type="text"
-        placeholder="Rechercher…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-      />
-
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="card overflow-hidden">
+        <div className="toolbar">
+          <div className="relative flex-1 max-w-xs">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" /><path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Rechercher un annonceur…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input pl-9"
+            />
+          </div>
+        </div>
         <AdvertisersTable search={search || undefined} onEdit={openEdit} />
       </div>
 
