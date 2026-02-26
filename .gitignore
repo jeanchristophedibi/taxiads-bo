@@ -34,4 +34,4 @@ pnpm-debug.log*
 # Local docs/context
 context/
 api/
-.stepper/
+stepper/
