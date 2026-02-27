@@ -9,26 +9,27 @@ import { useToast } from '@/shared/ui/toast-provider';
 /* ─── Helpers ─────────────────────────────────────────────────────────────── */
 const pad2 = (value: number) => String(value).padStart(2, '0');
 
+// Abidjan = UTC+0 — always display in UTC to avoid browser-local-timezone offset.
 const toInputValue = (iso?: string) => {
   if (!iso) return '';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso.slice(0, 16);
 
-  const year = date.getFullYear();
-  const month = pad2(date.getMonth() + 1);
-  const day = pad2(date.getDate());
-  const hours = pad2(date.getHours());
-  const minutes = pad2(date.getMinutes());
+  const year = date.getUTCFullYear();
+  const month = pad2(date.getUTCMonth() + 1);
+  const day = pad2(date.getUTCDate());
+  const hours = pad2(date.getUTCHours());
+  const minutes = pad2(date.getUTCMinutes());
 
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-// Keep local wall-clock time from <input type="datetime-local"> (no UTC conversion).
+// Input value is Abidjan/UTC+0 wall-clock time — send with explicit +00:00 so
+// Laravel parses it unambiguously regardless of server timezone config.
 const toApiDateTime = (local: string) => {
   if (!local) return '';
-  return local.includes(':') && local.length === 16
-    ? `${local.replace('T', ' ')}:00`
-    : local.replace('T', ' ');
+  const base = local.length === 16 ? local : local.slice(0, 16);
+  return `${base}:00+00:00`;
 };
 
 /* ─── Create modal ────────────────────────────────────────────────────────── */

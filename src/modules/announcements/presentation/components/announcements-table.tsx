@@ -13,6 +13,7 @@ const fmtDatetime = (iso: string) =>
   new Date(iso).toLocaleString('fr-FR', {
     day: 'numeric', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
+    timeZone: 'UTC',
   });
 
 export function AnnouncementsTable({ search, page, onPageChange }: Props) {
