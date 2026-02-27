@@ -14,11 +14,12 @@ import {
 } from '../hooks/use-screen-mutations';
 import { AssignPlaylistModal } from './assign-playlist-modal';
 import { ScreenEditModal } from './screen-edit-modal';
+import { ScreenLiveDetailsModal } from './screen-live-details-modal';
 import { useToast } from '@/shared/ui/toast-provider';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-type ModalKind = 'assign-playlist' | 'edit' | 'custom-emergency' | null;
+type ModalKind = 'assign-playlist' | 'edit' | 'custom-emergency' | 'live-details' | null;
 
 /* ─── Emergency labels ───────────────────────────────────────────────────── */
 const EMERGENCY_ACTIONS: { type: EmergencyType; label: string; icon: React.ReactNode; danger?: boolean }[] = [
@@ -231,6 +232,9 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
           className="bg-white rounded-apple-lg border py-1 shadow-apple-lg"
         >
           <Section label="Contrôle">
+            <Item label="Détails live" icon={
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" /><circle cx="12" cy="12" r="3" /></svg>
+            } onClick={() => openModal('live-details')} />
             <Item label="Actualiser" icon={
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></svg>
             } onClick={() => handleAction('Actualisation envoyée', () => refresh.mutateAsync(screen.id))} disabled={refresh.isPending} />
@@ -320,6 +324,10 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
           isPending={emergency.isPending}
           onConfirm={(payload) => handleEmergency('custom', payload)}
         />
+      )}
+
+      {modal === 'live-details' && (
+        <ScreenLiveDetailsModal screen={screen} onClose={() => setModal(null)} />
       )}
     </>
   );

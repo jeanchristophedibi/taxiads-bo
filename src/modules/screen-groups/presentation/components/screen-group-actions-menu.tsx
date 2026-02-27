@@ -2,13 +2,15 @@
 
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
-import type { Announcement } from '../../domain/entities/announcement';
-import { useDeleteAnnouncementMutation, useToggleAnnouncementMutation } from '../hooks/use-announcement-mutations';
-import { AnnouncementEditModal } from './announcement-form-modal';
+import { useRouter } from 'next/navigation';
+import type { ScreenGroup } from '../../domain/entities/screen-group';
+import { useDeleteScreenGroupMutation } from '../hooks/use-screen-group-mutations';
+import { ScreenGroupFormModal } from './screen-group-form-modal';
 import { useToast } from '@/shared/ui/toast-provider';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 
-export function AnnouncementActionsMenu({ announcement }: { announcement: Announcement }) {
+export function ScreenGroupActionsMenu({ group }: { group: ScreenGroup }) {
+  const router = useRouter();
   const toast = useToast();
   const confirm = useConfirm();
   const [open, setOpen] = useState(false);
@@ -16,8 +18,7 @@ export function AnnouncementActionsMenu({ announcement }: { announcement: Announ
   const [dropPos, setDropPos] = useState<{ top?: number; bottom?: number; right: number; maxHeight?: number }>({ top: 0, right: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
-  const deleteMutation = useDeleteAnnouncementMutation();
-  const toggleMutation = useToggleAnnouncementMutation();
+  const deleteMutation = useDeleteScreenGroupMutation();
 
   useEffect(() => {
     if (!open) return;
@@ -34,10 +35,10 @@ export function AnnouncementActionsMenu({ announcement }: { announcement: Announ
       const right = window.innerWidth - rect.right;
       const spaceBelow = window.innerHeight - rect.bottom - 8;
       const spaceAbove = rect.top - 8;
-      if (spaceBelow >= 160 || spaceBelow >= spaceAbove) {
-        setDropPos({ top: rect.bottom + 4, right, maxHeight: Math.min(280, spaceBelow) });
+      if (spaceBelow >= 120 || spaceBelow >= spaceAbove) {
+        setDropPos({ top: rect.bottom + 4, right, maxHeight: Math.min(240, spaceBelow) });
       } else {
-        setDropPos({ bottom: window.innerHeight - rect.top + 4, right, maxHeight: Math.min(280, spaceAbove) });
+        setDropPos({ bottom: window.innerHeight - rect.top + 4, right, maxHeight: Math.min(240, spaceAbove) });
       }
     }
     setOpen(true);
@@ -45,20 +46,11 @@ export function AnnouncementActionsMenu({ announcement }: { announcement: Announ
 
   const close = () => setOpen(false);
 
-  const handleToggle = () => {
-    close();
-    const activate = !announcement.isActiveNow;
-    toggleMutation.mutate({ id: announcement.id, activate }, {
-      onSuccess: () => toast.success(activate ? 'Annonce activée' : 'Annonce désactivée'),
-      onError: (err) => toast.error('Erreur', (err as Error).message),
-    });
-  };
-
   const handleDelete = async () => {
     close();
-    if (!await confirm({ title: `Supprimer "${announcement.title}" ?`, message: 'Cette action est irréversible.', confirmLabel: 'Supprimer', danger: true })) return;
-    deleteMutation.mutate(announcement.id, {
-      onSuccess: () => toast.success('Annonce supprimée'),
+    if (!await confirm({ title: `Supprimer "${group.name}" ?`, message: 'Cette action est irréversible.', confirmLabel: 'Supprimer', danger: true })) return;
+    deleteMutation.mutate(group.id, {
+      onSuccess: () => toast.success('Groupe supprimé'),
       onError: (err) => toast.error('Suppression échouée', (err as Error).message),
     });
   };
@@ -80,35 +72,16 @@ export function AnnouncementActionsMenu({ announcement }: { announcement: Announ
       {open && typeof document !== 'undefined' && createPortal(
         <div
           ref={dropRef}
-          style={{ position: 'fixed', top: dropPos.top, bottom: dropPos.bottom, right: dropPos.right, zIndex: 9999, minWidth: 170, maxHeight: dropPos.maxHeight, overflowY: dropPos.maxHeight ? 'auto' : undefined, borderColor: 'var(--apple-separator)' }}
+          style={{ position: 'fixed', top: dropPos.top, bottom: dropPos.bottom, right: dropPos.right, zIndex: 9999, minWidth: 160, maxHeight: dropPos.maxHeight, overflowY: dropPos.maxHeight ? 'auto' : undefined, borderColor: 'var(--apple-separator)' }}
           className="bg-white rounded-apple-lg border py-1 shadow-apple-lg"
         >
-          {/* Toggle activer/désactiver */}
-          <button
-            type="button"
-            onClick={handleToggle}
-            disabled={toggleMutation.isPending}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-left disabled:opacity-40 ${announcement.isActiveNow ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
-          >
-            {announcement.isActiveNow ? (
-              <>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" /><line x1="8" y1="12" x2="16" y2="12" />
-                </svg>
-                Désactiver
-              </>
-            ) : (
-              <>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" />
-                </svg>
-                Activer
-              </>
-            )}
+          <button type="button" onClick={() => { close(); router.push(`/ecrans/groupes/${group.id}`); }}
+            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 text-left">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+            </svg>
+            Voir les écrans
           </button>
-
-          <div style={{ height: 1, backgroundColor: 'var(--apple-separator)', margin: '2px 0' }} />
-
           <button type="button" onClick={() => { close(); setEditOpen(true); }}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 text-left">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -116,9 +89,7 @@ export function AnnouncementActionsMenu({ announcement }: { announcement: Announ
             </svg>
             Modifier
           </button>
-
           <div style={{ height: 1, backgroundColor: 'var(--apple-separator)', margin: '2px 0' }} />
-
           <button type="button" onClick={handleDelete} disabled={deleteMutation.isPending}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 text-left disabled:opacity-40">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -130,7 +101,7 @@ export function AnnouncementActionsMenu({ announcement }: { announcement: Announ
         document.body,
       )}
 
-      {editOpen && <AnnouncementEditModal announcement={announcement} onClose={() => setEditOpen(false)} />}
+      {editOpen && <ScreenGroupFormModal group={group} onClose={() => setEditOpen(false)} />}
     </>
   );
 }

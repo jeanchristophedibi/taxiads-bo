@@ -43,12 +43,13 @@ function SkeletonRow() {
 interface Props {
   search?: string;
   status?: ScreenStatus;
+  groupId?: string;
   page?: number;
   onPageChange?: (page: number) => void;
 }
 
-export function ScreensTable({ search, status, page = 1, onPageChange }: Props) {
-  const { data, isLoading, isError } = useScreensListQuery({ search, status, page, perPage: 20 });
+export function ScreensTable({ search, status, groupId, page = 1, onPageChange }: Props) {
+  const { data, isLoading, isError } = useScreensListQuery({ search, status, groupId, page, perPage: 20 });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const toggle = (id: string) => setSelectedIds((prev) => {

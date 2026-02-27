@@ -85,6 +85,12 @@ const icons = {
       <path d="M3 11l19-9-9 19-2-8-8-2z" />
     </svg>
   ),
+  programs: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  ),
   profile: (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
@@ -117,6 +123,7 @@ const NAV: NavGroup[] = [
     label: 'Communication',
     children: [
       { href: '/annonces', label: 'Annonces', icon: icons.announcements },
+      { href: '/programmes', label: 'Programmes', icon: icons.programs },
     ],
   },
   {

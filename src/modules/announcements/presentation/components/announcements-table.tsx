@@ -1,7 +1,10 @@
 'use client';
 
 import { useAnnouncementsQuery } from '../hooks/use-announcements-query';
+import { useToggleAnnouncementMutation } from '../hooks/use-announcement-mutations';
 import { AnnouncementActionsMenu } from './announcement-actions-menu';
+import type { Announcement } from '../../domain/entities/announcement';
+import { useToast } from '@/shared/ui/toast-provider';
 
 interface Props {
   search?: string;
@@ -15,6 +18,36 @@ const fmtDatetime = (iso: string) =>
     hour: '2-digit', minute: '2-digit',
     timeZone: 'UTC',
   });
+
+function ToggleSwitch({ announcement }: { announcement: Announcement }) {
+  const toast = useToast();
+  const toggleMutation = useToggleAnnouncementMutation();
+  const active = announcement.isActiveNow;
+
+  const handleToggle = () => {
+    toggleMutation.mutate({ id: announcement.id, activate: !active }, {
+      onSuccess: () => toast.success(active ? 'Annonce désactivée' : 'Annonce activée'),
+      onError: (err) => toast.error('Erreur', (err as Error).message),
+    });
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleToggle}
+      disabled={toggleMutation.isPending}
+      title={active ? 'Désactiver' : 'Activer'}
+      className="flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <span className={`relative inline-flex w-9 h-5 rounded-full transition-colors duration-200 ${active ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+        <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${active ? 'translate-x-4' : 'translate-x-0'}`} />
+      </span>
+      <span className={`text-xs font-medium ${active ? 'text-emerald-700' : 'text-slate-400'}`}>
+        {toggleMutation.isPending ? '…' : active ? 'Actif' : 'Inactif'}
+      </span>
+    </button>
+  );
+}
 
 export function AnnouncementsTable({ search, page, onPageChange }: Props) {
   const { data, isLoading, isError } = useAnnouncementsQuery({ search, page });
@@ -50,7 +83,7 @@ export function AnnouncementsTable({ search, page, onPageChange }: Props) {
                   <td className="px-5 py-3"><div className="skeleton h-3.5 w-40 rounded" /></td>
                   <td className="px-5 py-3"><div className="skeleton h-3 w-60 rounded" /></td>
                   <td className="px-5 py-3"><div className="skeleton h-3 w-44 rounded" /></td>
-                  <td className="px-5 py-3"><div className="skeleton h-5 w-20 rounded-full" /></td>
+                  <td className="px-5 py-3"><div className="skeleton h-5 w-24 rounded" /></td>
                   <td className="px-5 py-3"><div className="skeleton h-3 w-24 rounded" /></td>
                   <td className="px-3 py-3" />
                 </tr>
@@ -83,10 +116,7 @@ export function AnnouncementsTable({ search, page, onPageChange }: Props) {
                     <span>{fmtDatetime(a.endsAt)}</span>
                   </td>
                   <td className="px-5 py-3">
-                    {a.isActiveNow
-                      ? <span className="badge bg-emerald-50 text-emerald-700">Actif</span>
-                      : <span className="badge bg-slate-100 text-slate-500">Inactif</span>
-                    }
+                    <ToggleSwitch announcement={a} />
                   </td>
                   <td className="px-5 py-3 text-xs text-slate-400 whitespace-nowrap">
                     {new Date(a.createdAt).toLocaleDateString('fr-FR')}
