@@ -164,15 +164,15 @@ select.input {
 
 /* ─── Toolbar ────────────────────────────────────────────────────────────── */
 .toolbar {
-  @apply flex items-center gap-3 px-4 py-3;
+  @apply flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3;
   border-bottom: 0.5px solid var(--apple-separator);
   background: rgba(249, 249, 251, 0.85);
 }
 
 /* ─── Page header ────────────────────────────────────────────────────────── */
-.page-header { @apply flex items-center justify-between mb-7; }
+.page-header { @apply flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 md:mb-7; }
 .page-title {
-  @apply text-[1.625rem] font-bold text-gray-900;
+  @apply text-2xl sm:text-[1.625rem] font-bold text-gray-900;
   letter-spacing: -0.025em;
 }
 
@@ -190,33 +190,61 @@ select.input {
   inset: 0;
   z-index: 50;
   display: flex;
-  align-items: center;
+  align-items: flex-end; /* bottom sheet on mobile */
   justify-content: center;
-  padding: 1rem;
+  padding: 0;
   background: rgba(0, 0, 0, 0.34);
   backdrop-filter: blur(10px) saturate(180%);
   -webkit-backdrop-filter: blur(10px) saturate(180%);
   animation: fade-in 200ms var(--ease-apple);
 }
+@media (min-width: 640px) {
+  .modal-overlay {
+    align-items: center;
+    padding: 1rem;
+  }
+}
 .modal-sheet {
   width: 100%;
+  max-height: 92dvh;
+  display: flex;
+  flex-direction: column;
   background: rgba(255, 255, 255, 0.97);
-  border-radius: var(--radius-modal);
+  border-radius: 20px 20px 0 0; /* rounded top on mobile */
   box-shadow: 0 28px 90px rgba(0,0,0,0.24), 0 8px 28px rgba(0,0,0,0.12),
               0 0 0 0.5px rgba(0,0,0,0.06);
   animation: modal-in 380ms cubic-bezier(0.34, 1.2, 0.64, 1);
   overflow: hidden;
 }
+@media (min-width: 640px) {
+  .modal-sheet {
+    border-radius: var(--radius-modal);
+    max-height: none;
+  }
+}
 .modal-header {
-  @apply flex items-center justify-between px-6 py-4;
+  @apply flex items-center justify-between px-5 py-4 sm:px-6;
   border-bottom: 0.5px solid var(--apple-separator);
   background: rgba(249, 249, 251, 0.9);
+  shrink: 0;
 }
-.modal-body { @apply px-6 py-5; }
+.modal-body { @apply px-5 py-4 sm:px-6 sm:py-5; overflow-y: auto; flex: 1; }
 .modal-footer {
-  @apply flex justify-end gap-2 px-6 py-4;
+  @apply flex justify-end gap-2 px-5 py-4 sm:px-6;
   border-top: 0.5px solid var(--apple-separator);
   background: rgba(249, 249, 251, 0.8);
+  shrink: 0;
+}
+
+/* ─── Dashboard layout ───────────────────────────────────────────────────── */
+.dashboard-content {
+  padding-top: 3.5rem; /* space for fixed mobile topbar (h-14) */
+}
+@media (min-width: 768px) {
+  .dashboard-content {
+    padding-top: 0;
+    margin-left: var(--sidebar-w);
+  }
 }
 
 /* ─── Sidebar glass ──────────────────────────────────────────────────────── */

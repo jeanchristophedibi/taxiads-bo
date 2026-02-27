@@ -32,7 +32,7 @@ export function ArtworksTable({ query, page, onPageChange }: Props) {
 
   return (
     <div className="card p-0 overflow-hidden">
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead>
           <tr className="tbl-head">
             <th className="text-left pl-4 pr-2 py-3 w-12" />
@@ -109,7 +109,7 @@ export function ArtworksTable({ query, page, onPageChange }: Props) {
                 );
               })}
         </tbody>
-      </table>
+      </table></div>
 
       {/* Pagination */}
       {meta && meta.lastPage > 1 && (

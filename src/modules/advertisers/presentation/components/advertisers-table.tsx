@@ -25,12 +25,12 @@ export function AdvertisersTable({ search, onEdit }: Props) {
 
   if (isLoading) {
     return (
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead><tr className="tbl-head">
           <th>Annonceur</th><th>Contact</th><th>Campagnes</th><th>Play logs</th>{onEdit && <th />}
         </tr></thead>
         <tbody>{Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)}</tbody>
-      </table>
+      </table></div>
     );
   }
 
@@ -60,7 +60,7 @@ export function AdvertisersTable({ search, onEdit }: Props) {
 
   return (
     <>
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead>
           <tr className="tbl-head">
             <th>Annonceur</th>
@@ -107,7 +107,7 @@ export function AdvertisersTable({ search, onEdit }: Props) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
       <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
         <p className="text-xs text-slate-400">
           {data.value.meta.total} annonceur{data.value.meta.total > 1 ? 's' : ''} au total

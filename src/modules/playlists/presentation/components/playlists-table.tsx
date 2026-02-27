@@ -43,14 +43,14 @@ export function PlaylistsTable({ search, page = 1, onPageChange }: Props) {
 
   if (isLoading) {
     return (
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead>
           <tr className="tbl-head">
             <th>Playlist</th><th>Campagne</th><th>Écrans</th><th>Items</th><th>Lieux</th><th className="w-10" />
           </tr>
         </thead>
         <tbody>{Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)}</tbody>
-      </table>
+      </table></div>
     );
   }
 
@@ -82,7 +82,7 @@ export function PlaylistsTable({ search, page = 1, onPageChange }: Props) {
 
   return (
     <>
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead>
           <tr className="tbl-head">
             <th>Playlist</th>
@@ -133,7 +133,7 @@ export function PlaylistsTable({ search, page = 1, onPageChange }: Props) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
 
       {/* Footer */}
       <div className="flex items-center justify-between px-5 py-3 border-t" style={{ borderColor: 'var(--apple-separator)', background: 'rgba(249,249,251,0.7)' }}>

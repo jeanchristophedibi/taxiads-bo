@@ -2,7 +2,11 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { makeScreenGroupsModule } from '../../index';
-import type { SaveScreenGroupInput, UpdateScreenGroupInput } from '../../infrastructure/repositories/http-screen-group-repository';
+import type {
+  AssignScreenGroupPlaylistInput,
+  SaveScreenGroupInput,
+  UpdateScreenGroupInput,
+} from '../../infrastructure/repositories/http-screen-group-repository';
 
 export const useCreateScreenGroupMutation = () => {
   const queryClient = useQueryClient();
@@ -39,5 +43,22 @@ export const useDeleteScreenGroupMutation = () => {
       if (!result.ok) throw result.error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['screen-groups'] }),
+  });
+};
+
+export const useAssignScreenGroupPlaylistMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: AssignScreenGroupPlaylistInput }) => {
+      const { repository } = makeScreenGroupsModule();
+      const result = await repository.assignPlaylist(id, data);
+      if (!result.ok) throw result.error;
+      return result.value;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['screen-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['screen-groups', vars.id] });
+      queryClient.invalidateQueries({ queryKey: ['screens'] });
+    },
   });
 };

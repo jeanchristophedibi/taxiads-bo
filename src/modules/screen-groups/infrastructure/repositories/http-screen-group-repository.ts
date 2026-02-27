@@ -14,6 +14,18 @@ export interface UpdateScreenGroupInput {
   settings?: { timezone?: string } & Record<string, unknown>;
 }
 
+export interface AssignScreenGroupPlaylistInput {
+  playlistId?: number;
+  playlistKey?: string;
+}
+
+export interface AssignScreenGroupPlaylistResult {
+  screenGroup: { key: string; value: string };
+  playlist: { key: string; value: string };
+  affected: number;
+  screenKeys: string[];
+}
+
 const wrap = async <T>(fn: () => Promise<T>, message: string) => {
   try {
     return ok(await fn());
@@ -81,5 +93,32 @@ export class HttpScreenGroupRepository {
       () => this.httpClient.request({ path: `/bo/screen-groups/${id}`, method: 'DELETE' }).then(() => undefined),
       'Failed to delete screen group',
     );
+  }
+
+  async assignPlaylist(id: string, data: AssignScreenGroupPlaylistInput) {
+    return wrap(async () => {
+      const response = await this.httpClient.request<{
+        data: {
+          screen_group: { key: string; value: string };
+          playlist: { key: string; value: string };
+          affected: number;
+          screen_keys: string[];
+        };
+      }>({
+        path: `/bo/screen-groups/${id}/assign-playlist`,
+        method: 'POST',
+        body: {
+          playlist_id: data.playlistId,
+          playlist_key: data.playlistKey,
+        },
+      });
+
+      return {
+        screenGroup: response.data.screen_group,
+        playlist: response.data.playlist,
+        affected: response.data.affected,
+        screenKeys: response.data.screen_keys ?? [],
+      } satisfies AssignScreenGroupPlaylistResult;
+    }, 'Failed to assign playlist to screen group');
   }
 }

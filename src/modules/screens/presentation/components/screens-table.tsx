@@ -68,13 +68,13 @@ export function ScreensTable({ search, status, groupId, page = 1, onPageChange }
 
   if (isLoading) {
     return (
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead><tr className="tbl-head">
           <th className="w-10" />
           <th>Écran</th><th>Localisation</th><th>Statut</th><th>Dernier ping</th><th className="w-10" />
         </tr></thead>
         <tbody>{Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}</tbody>
-      </table>
+      </table></div>
     );
   }
 
@@ -109,7 +109,7 @@ export function ScreensTable({ search, status, groupId, page = 1, onPageChange }
         <BulkBar selectedKeys={selectedKeys} onClear={() => setSelectedIds(new Set())} />
       )}
 
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead>
           <tr className="tbl-head">
             <th className="w-10 px-4">
@@ -163,7 +163,7 @@ export function ScreensTable({ search, status, groupId, page = 1, onPageChange }
             );
           })}
         </tbody>
-      </table>
+      </table></div>
 
       {/* Footer: pagination + count */}
       {meta && (

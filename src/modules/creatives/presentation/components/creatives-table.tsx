@@ -86,7 +86,7 @@ export function CreativesTable({ search, campaignId, isActive, page = 1, onPageC
 
   if (isLoading) {
     return (
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead>
           <tr className="tbl-head">
             <th>Créative</th><th>Campagne</th><th>Format</th>
@@ -94,7 +94,7 @@ export function CreativesTable({ search, campaignId, isActive, page = 1, onPageC
           </tr>
         </thead>
         <tbody>{Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)}</tbody>
-      </table>
+      </table></div>
     );
   }
 
@@ -126,7 +126,7 @@ export function CreativesTable({ search, campaignId, isActive, page = 1, onPageC
 
   return (
     <>
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead>
           <tr className="tbl-head">
             <th>Créative</th>
@@ -208,7 +208,7 @@ export function CreativesTable({ search, campaignId, isActive, page = 1, onPageC
             );
           })}
         </tbody>
-      </table>
+      </table></div>
 
       {/* Footer */}
       <div className="flex items-center justify-between px-5 py-3 border-t" style={{ borderColor: 'var(--apple-separator)', background: 'rgba(249,249,251,0.7)' }}>

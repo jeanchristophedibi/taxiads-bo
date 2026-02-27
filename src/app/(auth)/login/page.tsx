@@ -153,7 +153,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div>
+          {/* <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">Code OTP <span style={{ color: 'var(--apple-label)' }} className="font-normal">(si 2FA activée)</span></label>
             <input
               name="otp_code"
@@ -162,7 +162,7 @@ export default function LoginPage() {
               onChange={(e) => setOtpCode(e.target.value)}
               className="input"
             />
-          </div>
+          </div> */}
 
           <button
             type="submit"

@@ -65,7 +65,7 @@ export function AnnouncementsTable({ search, page, onPageChange }: Props) {
 
   return (
     <div className="card p-0 overflow-hidden">
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead>
           <tr className="tbl-head">
             <th className="text-left px-5 py-3">Titre</th>
@@ -127,7 +127,7 @@ export function AnnouncementsTable({ search, page, onPageChange }: Props) {
                 </tr>
               ))}
         </tbody>
-      </table>
+      </table></div>
 
       {meta && meta.lastPage > 1 && (
         <div className="flex items-center justify-between px-5 py-3 border-t" style={{ borderColor: 'var(--apple-separator)', background: 'rgba(249,249,251,0.7)' }}>

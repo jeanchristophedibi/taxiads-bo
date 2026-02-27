@@ -54,13 +54,13 @@ export function CampaignsTable({ search, status, page = 1, onPageChange, onEdit,
 
   if (isLoading) {
     return (
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead><tr className="tbl-head">
           <th>Campagne</th><th>Annonceur</th><th>Statut</th>
           <th>Budget</th><th>Période</th>{hasActions && <th />}
         </tr></thead>
         <tbody>{Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}</tbody>
-      </table>
+      </table></div>
     );
   }
 
@@ -94,7 +94,7 @@ export function CampaignsTable({ search, status, page = 1, onPageChange, onEdit,
 
   return (
     <>
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead>
           <tr className="tbl-head">
             <th>Campagne</th>
@@ -145,7 +145,7 @@ export function CampaignsTable({ search, status, page = 1, onPageChange, onEdit,
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
 
       {/* Pagination footer */}
       <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">

@@ -4,8 +4,9 @@ import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ScreenGroup } from '../../domain/entities/screen-group';
-import { useDeleteScreenGroupMutation } from '../hooks/use-screen-group-mutations';
+import { useAssignScreenGroupPlaylistMutation, useDeleteScreenGroupMutation } from '../hooks/use-screen-group-mutations';
 import { ScreenGroupFormModal } from './screen-group-form-modal';
+import { ScreenGroupAssignPlaylistModal } from './screen-group-assign-playlist-modal';
 import { useToast } from '@/shared/ui/toast-provider';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 
@@ -15,10 +16,12 @@ export function ScreenGroupActionsMenu({ group }: { group: ScreenGroup }) {
   const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [assignPlaylistOpen, setAssignPlaylistOpen] = useState(false);
   const [dropPos, setDropPos] = useState<{ top?: number; bottom?: number; right: number; maxHeight?: number }>({ top: 0, right: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const deleteMutation = useDeleteScreenGroupMutation();
+  const assignPlaylistMutation = useAssignScreenGroupPlaylistMutation();
 
   useEffect(() => {
     if (!open) return;
@@ -89,6 +92,13 @@ export function ScreenGroupActionsMenu({ group }: { group: ScreenGroup }) {
             </svg>
             Modifier
           </button>
+          <button type="button" onClick={() => { close(); setAssignPlaylistOpen(true); }}
+            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 text-left">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m9 11 3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+            </svg>
+            Assigner playlist
+          </button>
           <div style={{ height: 1, backgroundColor: 'var(--apple-separator)', margin: '2px 0' }} />
           <button type="button" onClick={handleDelete} disabled={deleteMutation.isPending}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 text-left disabled:opacity-40">
@@ -102,6 +112,25 @@ export function ScreenGroupActionsMenu({ group }: { group: ScreenGroup }) {
       )}
 
       {editOpen && <ScreenGroupFormModal group={group} onClose={() => setEditOpen(false)} />}
+      {assignPlaylistOpen && (
+        <ScreenGroupAssignPlaylistModal
+          groupName={group.name}
+          isPending={assignPlaylistMutation.isPending}
+          onClose={() => setAssignPlaylistOpen(false)}
+          onConfirm={(playlistKey) => {
+            assignPlaylistMutation.mutate(
+              { id: group.id, data: { playlistKey } },
+              {
+                onSuccess: (result) => {
+                  toast.success(`Playlist assignée (${result.affected} écran${result.affected > 1 ? 's' : ''})`);
+                  setAssignPlaylistOpen(false);
+                },
+                onError: (err) => toast.error('Assignation échouée', (err as Error).message),
+              },
+            );
+          }}
+        />
+      )}
     </>
   );
 }

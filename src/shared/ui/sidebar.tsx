@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { useSidebar } from './sidebar-context';
 
 /* ─── Icons ─────────────────────────────────────────────────────────────── */
 const icons = {
@@ -142,10 +143,11 @@ const isActivePath = (pathname: string, href: string) =>
 /* ─── Component ──────────────────────────────────────────────────────────── */
 export function Sidebar() {
   const pathname = usePathname();
+  const { isOpen, close } = useSidebar();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => { setIsProfileOpen(false); }, [pathname]);
+  useEffect(() => { setIsProfileOpen(false); close(); }, [pathname, close]);
 
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
@@ -156,10 +158,22 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside
-      className="fixed inset-y-0 left-0 flex flex-col z-40 sidebar-glass"
-      style={{ width: 'var(--sidebar-w)' }}
-    >
+    <>
+      {/* Mobile overlay — closes sidebar on tap outside */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={close}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 flex flex-col z-40 sidebar-glass transition-transform duration-300 ease-[var(--ease-apple)] ${
+          isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+        style={{ width: 'var(--sidebar-w)' }}
+      >
       {/* ── Logo ─────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2.5 px-5 h-16 border-b border-white/5 shrink-0">
         <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
@@ -285,6 +299,7 @@ export function Sidebar() {
           )}
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
