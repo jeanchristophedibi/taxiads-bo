@@ -15,6 +15,7 @@ import {
 import { AssignPlaylistModal } from './assign-playlist-modal';
 import { ScreenEditModal } from './screen-edit-modal';
 import { useToast } from '@/shared/ui/toast-provider';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 type ModalKind = 'assign-playlist' | 'edit' | 'custom-emergency' | null;
@@ -138,9 +139,10 @@ function CustomEmergencyModal({
 /* ─── Main component ─────────────────────────────────────────────────────── */
 export function ScreenActionsMenu({ screen }: { screen: Screen }) {
   const toast = useToast();
+  const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [modal, setModal] = useState<ModalKind>(null);
-  const [dropPos, setDropPos] = useState({ top: 0, right: 0 });
+  const [dropPos, setDropPos] = useState<{ top?: number; bottom?: number; right: number; maxHeight?: number }>({ top: 0, right: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
 
@@ -163,11 +165,19 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  /* Open dropdown and calculate position */
+  /* Open dropdown — flip upward if not enough space below */
   const handleOpen = () => {
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setDropPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+      const right = window.innerWidth - rect.right;
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+
+      if (spaceBelow >= 300 || spaceBelow >= spaceAbove) {
+        setDropPos({ top: rect.bottom + 4, right, maxHeight: Math.min(440, spaceBelow) });
+      } else {
+        setDropPos({ bottom: window.innerHeight - rect.top + 4, right, maxHeight: Math.min(440, spaceAbove) });
+      }
     }
     setOpen(true);
   };
@@ -217,7 +227,7 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
       {open && typeof document !== 'undefined' && createPortal(
         <div
           ref={dropRef}
-          style={{ position: 'fixed', top: dropPos.top, right: dropPos.right, zIndex: 9999, minWidth: 220, borderColor: 'var(--apple-separator)' }}
+          style={{ position: 'fixed', top: dropPos.top, bottom: dropPos.bottom, right: dropPos.right, zIndex: 9999, minWidth: 220, maxHeight: dropPos.maxHeight, overflowY: dropPos.maxHeight ? 'auto' : undefined, borderColor: 'var(--apple-separator)' }}
           className="bg-white rounded-apple-lg border py-1 shadow-apple-lg"
         >
           <Section label="Contrôle">
@@ -267,9 +277,9 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
             } onClick={() => openModal('edit')} />
             <Item label="Supprimer" danger icon={
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" /></svg>
-            } onClick={() => {
+            } onClick={async () => {
               close();
-              if (!window.confirm(`Supprimer l'écran "${screen.name}" ?`)) return;
+              if (!await confirm({ title: `Supprimer "${screen.name}" ?`, confirmLabel: 'Supprimer', danger: true })) return;
               deleteSc.mutate(screen.id, {
                 onSuccess: (res) => {
                   if (res && !res.ok) toast.error('Suppression', (res.error as { message: string })?.message);

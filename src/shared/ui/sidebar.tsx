@@ -23,6 +23,11 @@ const icons = {
       <path d="m21 15-5-5L5 21" />
     </svg>
   ),
+  artworks: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" />
+    </svg>
+  ),
   campaigns: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 11l19-9-9 19-2-8-8-2z" />
@@ -75,6 +80,11 @@ const icons = {
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
     </svg>
   ),
+  announcements: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11l19-9-9 19-2-8-8-2z" />
+    </svg>
+  ),
   profile: (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
@@ -96,10 +106,17 @@ const NAV: NavGroup[] = [
     children: [
       { href: '/ecrans',     label: 'Écrans',       icon: icons.screens },
       { href: '/creatives',  label: 'Créatives',    icon: icons.creatives },
+      { href: '/artworks',   label: 'Artworks',     icon: icons.artworks },
       { href: '/campagnes',  label: 'Campagnes',    icon: icons.campaigns },
       { href: '/playlists',  label: 'Playlists',    icon: icons.playlists },
       { href: '/play-logs',  label: 'Historique',   icon: icons.history },
       { href: '/carte',      label: 'Carte',        icon: icons.map },
+    ],
+  },
+  {
+    label: 'Communication',
+    children: [
+      { href: '/annonces', label: 'Annonces', icon: icons.announcements },
     ],
   },
   {

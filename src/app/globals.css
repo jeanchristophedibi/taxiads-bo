@@ -345,6 +345,16 @@ body.notifications-open .dashboard-shell {
 .toast-error   { --toast-accent: #FF3B30; }
 .toast-info    { --toast-accent: #007AFF; }
 
+/* ─── Apple spinner ──────────────────────────────────────────────────────── */
+@keyframes spinner-blade {
+  0%   { opacity: 1; }
+  100% { opacity: 0.13; }
+}
+.spinner-blade {
+  animation: spinner-blade 1s linear infinite;
+  transform-origin: center;
+}
+
 /* ─── Keyframes ──────────────────────────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -600px 0; }

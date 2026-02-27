@@ -24,9 +24,12 @@ export class FetchHttpClient implements HttpClient {
   async request<T>(request: HttpRequest): Promise<T> {
     const url = `${env.apiBaseUrl}${request.path}${toQueryString(request.query)}`;
 
+    const isFormData = !!request.formData;
+
     const headers: Record<string, string> = {
       Accept: 'application/json',
-      'Content-Type': 'application/json',
+      // Omit Content-Type for FormData — browser sets it with the correct boundary
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(request.headers ?? {}),
     };
 
@@ -42,7 +45,7 @@ export class FetchHttpClient implements HttpClient {
     const response = await fetch(url, {
       method: request.method ?? 'GET',
       headers,
-      body: request.body ? JSON.stringify(request.body) : undefined,
+      body: isFormData ? request.formData : request.body ? JSON.stringify(request.body) : undefined,
       cache: 'no-store',
     });
 
@@ -55,6 +58,10 @@ export class FetchHttpClient implements HttpClient {
         status: response.status,
         path: request.path,
       });
+    }
+
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return undefined as T;
     }
 
     return (await response.json()) as T;

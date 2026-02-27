@@ -27,7 +27,7 @@ const fetchOptions = async (resource: string): Promise<OptionItem[]> => {
   return json.data ?? [];
 };
 
-export const useOptionsQuery = (resource: 'advertisers' | 'projects' | 'campaigns' | 'locations' | 'screens' | 'playlists' | 'creatives' | 'layouts' | 'pages') =>
+export const useOptionsQuery = (resource: 'advertisers' | 'projects' | 'campaigns' | 'locations' | 'screens' | 'playlists' | 'creatives' | 'layouts' | 'pages' | 'artworks') =>
   useQuery({
     queryKey: ['options', resource],
     queryFn: () => fetchOptions(resource),

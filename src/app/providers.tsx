@@ -6,6 +6,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { AppError } from '@/shared/domain/app-error';
 import { makeQueryClient } from '@/shared/application/query-client';
 import { ToastProvider } from '@/shared/ui/toast-provider';
+import { ConfirmProvider } from '@/shared/ui/confirm-dialog';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(makeQueryClient);
@@ -29,7 +30,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>{children}</ToastProvider>
+      <ToastProvider><ConfirmProvider>{children}</ConfirmProvider></ToastProvider>
     </QueryClientProvider>
   );
 }

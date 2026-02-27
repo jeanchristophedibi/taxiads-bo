@@ -22,8 +22,6 @@ export function PlaylistForm({ playlist, onClose }: Props) {
 
   const [form, setForm] = useState({
     name: playlist?.name ?? '',
-    type: playlist?.type ?? 'user',
-    internal_name: playlist?.internalName ?? '',
     project_id: playlist?.project?.key ?? '',
     campaign_id: playlist?.campaign?.key ?? '',
   });
@@ -39,8 +37,6 @@ export function PlaylistForm({ playlist, onClose }: Props) {
 
     const payload: CreatePlaylistInput | UpdatePlaylistInput = {
       name: form.name,
-      type: form.type || undefined,
-      internal_name: form.internal_name || undefined,
       project_id: form.project_id || undefined,
       campaign_id: form.campaign_id || undefined,
     };
@@ -108,19 +104,6 @@ export function PlaylistForm({ playlist, onClose }: Props) {
               </label>
               <input required value={form.name} onChange={(e) => set('name', e.target.value)}
                 placeholder="Ex. Playlist Matin" className="input" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Type</label>
-                <input value={form.type} onChange={(e) => set('type', e.target.value)}
-                  placeholder="user" className="input" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Nom interne</label>
-                <input value={form.internal_name} onChange={(e) => set('internal_name', e.target.value)}
-                  placeholder="Ex. playlist_matin" className="input" />
-              </div>
             </div>
 
             <div>
