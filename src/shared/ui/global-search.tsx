@@ -30,12 +30,12 @@ const getAuthToken = (): string | null => {
   return match ? decodeURIComponent(match[1]) : null;
 };
 
-const getAuthUser = (): { name: string; email: string } | null => {
+const getAuthUser = (): { name: string; email: string; avatar_url?: string | null } | null => {
   if (typeof document === 'undefined') return null;
   const match = document.cookie.match(/(?:^|; )auth_user=([^;]*)/);
   if (!match) return null;
   try {
-    return JSON.parse(decodeURIComponent(match[1])) as { name: string; email: string };
+    return JSON.parse(decodeURIComponent(match[1])) as { name: string; email: string; avatar_url?: string | null };
   } catch {
     return null;
   }
@@ -53,7 +53,7 @@ export function GlobalSearchBar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileDropdownPos, setProfileDropdownPos] = useState({ top: 0, right: 0 });
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; email: string; avatar_url?: string | null } | null>(null);
   const [openPopup, setOpenPopup] = useState(false);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<ScopeResult[]>([]);
@@ -69,6 +69,12 @@ export function GlobalSearchBar() {
   useEffect(() => {
     setUser(getAuthUser());
   }, [pathname]);
+
+  useEffect(() => {
+    const refresh = () => setUser(getAuthUser());
+    window.addEventListener('auth-user-updated', refresh);
+    return () => window.removeEventListener('auth-user-updated', refresh);
+  }, []);
 
   useEffect(() => {
     const onMouseDown = (event: MouseEvent) => {
@@ -261,10 +267,17 @@ export function GlobalSearchBar() {
         <button
           type="button"
           onClick={() => setProfileOpen((value) => !value)}
-          className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-semibold border border-white/20 shadow-lg shadow-indigo-500/25"
+          className="h-9 w-9 rounded-full overflow-hidden border border-white/20 shadow-lg shadow-indigo-500/25 focus:outline-none"
           aria-label="Compte"
         >
-          {initials}
+          {user?.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.avatar_url} alt="avatar" className="h-full w-full object-cover" />
+          ) : (
+            <span className="h-full w-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-semibold">
+              {initials}
+            </span>
+          )}
         </button>
       </div>
 

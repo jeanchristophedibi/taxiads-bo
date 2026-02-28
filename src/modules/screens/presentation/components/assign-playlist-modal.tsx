@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function AssignPlaylistModal({ onConfirm, onClose, isPending, title = 'Définir la playlist' }: Props) {
-  const { data: playlists = [], isLoading } = useOptionsQuery('playlists');
+  const { data: playlists = [], isLoading, isError } = useOptionsQuery('playlists');
   const [playlistKey, setPlaylistKey] = useState('');
 
   return (
@@ -43,6 +43,16 @@ export function AssignPlaylistModal({ onConfirm, onClose, isPending, title = 'D�
             placeholder="Choisir une playlist…"
             isLoading={isLoading}
           />
+          {isError && (
+            <p className="text-xs text-red-600">
+              Impossible de charger les playlists. Vérifiez votre session et l'API.
+            </p>
+          )}
+          {!isLoading && !isError && playlists.length === 0 && (
+            <p className="text-xs text-slate-500">
+              Aucune playlist disponible.
+            </p>
+          )}
         </div>
 
         <div className="modal-footer">

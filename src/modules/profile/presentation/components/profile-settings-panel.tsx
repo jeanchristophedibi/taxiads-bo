@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import QRCode from 'react-qr-code';
 import { useToast } from '@/shared/ui/toast-provider';
 
 type ProfileData = {
@@ -27,9 +28,9 @@ const getAuthToken = (): string | null => {
   return match ? decodeURIComponent(match[1]) : null;
 };
 
-const setAuthUserCookie = (name: string, email: string) => {
+const setAuthUserCookie = (name: string, email: string, avatar_url?: string | null) => {
   const maxAge = 60 * 60 * 24 * 7;
-  document.cookie = `auth_user=${encodeURIComponent(JSON.stringify({ name, email }))}; path=/; max-age=${maxAge}; samesite=lax`;
+  document.cookie = `auth_user=${encodeURIComponent(JSON.stringify({ name, email, avatar_url: avatar_url ?? null }))}; path=/; max-age=${maxAge}; samesite=lax`;
   window.dispatchEvent(new Event('auth-user-updated'));
 };
 
@@ -39,11 +40,14 @@ export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: {
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const [profileForm, setProfileForm] = useState({ name: '', email: '' });
   const [passwordForm, setPasswordForm] = useState({ current_password: '', password: '', password_confirmation: '' });
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [enablePassword, setEnablePassword] = useState('');
   const [pendingSetup, setPendingSetup] = useState<EnableTwoFaData | null>(null);
@@ -58,6 +62,18 @@ export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: {
     return label.toLowerCase().includes(normalizedFilter);
   };
 
+  const initials = useMemo(() => {
+    const name = profileForm.name || '';
+    return name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '?';
+  }, [profileForm.name]);
+
+  useEffect(() => {
+    if (!avatarFile) { setAvatarPreview(null); return; }
+    const url = URL.createObjectURL(avatarFile);
+    setAvatarPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [avatarFile]);
+
   const headers = useMemo(() => {
     const token = getAuthToken();
     return {
@@ -69,6 +85,7 @@ export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: {
   const loadProfile = async () => {
     if (!apiBase) return;
     setLoading(true);
+    setLoadError(false);
 
     try {
       const res = await fetch(`${apiBase}/profile`, { headers, cache: 'no-store' });
@@ -77,6 +94,7 @@ export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: {
       setProfile(json.data);
       setProfileForm({ name: json.data.name, email: json.data.email });
     } catch (error) {
+      setLoadError(true);
       toast.error('Profil', (error as Error).message);
     } finally {
       setLoading(false);
@@ -84,7 +102,28 @@ export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: {
   };
 
   useEffect(() => {
-    loadProfile();
+    if (!apiBase) return;
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
+
+    fetch(`${apiBase}/profile`, { headers, cache: 'no-store' })
+      .then(async (res) => {
+        if (cancelled) return;
+        if (!res.ok) throw new Error('Impossible de charger le profil');
+        const json = (await res.json()) as { data: ProfileData };
+        if (cancelled) return;
+        setProfile(json.data);
+        setProfileForm({ name: json.data.name, email: json.data.email });
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -92,7 +131,7 @@ export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: {
     return <div className="text-sm text-red-500">Missing NEXT_PUBLIC_API_BASE_URL</div>;
   }
 
-  const updateProfile = async (e: React.FormEvent) => {
+  const updateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       const res = await fetch(`${apiBase}/profile`, {
@@ -103,14 +142,14 @@ export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: {
       if (!res.ok) throw new Error('Échec de mise à jour du profil');
       const json = (await res.json()) as { data: ProfileData };
       setProfile(json.data);
-      setAuthUserCookie(json.data.name, json.data.email);
+      setAuthUserCookie(json.data.name, json.data.email, json.data.avatar_url);
       toast.success('Profil mis à jour');
     } catch (error) {
       toast.error('Erreur profil', (error as Error).message);
     }
   };
 
-  const changePassword = async (e: React.FormEvent) => {
+  const changePassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       const res = await fetch(`${apiBase}/profile/password`, {
@@ -139,6 +178,7 @@ export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: {
       if (!res.ok) throw new Error('Échec upload avatar');
       const json = (await res.json()) as { data: ProfileData };
       setProfile(json.data);
+      setAuthUserCookie(json.data.name, json.data.email, json.data.avatar_url);
       setAvatarFile(null);
       toast.success('Avatar mis à jour');
     } catch (error) {
@@ -155,6 +195,7 @@ export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: {
       if (!res.ok) throw new Error('Échec suppression avatar');
       const json = (await res.json()) as { data: ProfileData };
       setProfile(json.data);
+      setAuthUserCookie(json.data.name, json.data.email, json.data.avatar_url);
       toast.success('Avatar supprimé');
     } catch (error) {
       toast.error('Erreur avatar', (error as Error).message);
@@ -237,10 +278,122 @@ export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: {
     <div className="space-y-5">
       {showTitle && <h1 className="text-xl font-semibold text-slate-900">Mon profil</h1>}
 
-      {loading || !profile ? (
+      {!profile && loading ? (
         <div className="text-sm text-slate-400">Chargement…</div>
+      ) : !profile || loadError ? (
+        <div className="text-sm text-red-500">Impossible de charger le profil. <button type="button" onClick={() => void loadProfile()} className="underline">Réessayer</button></div>
       ) : (
         <>
+        {isSectionVisible('Avatar') && (
+          <section className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+            <div className="relative h-44 sm:h-52">
+              {/* Avatar image fills the banner when available */}
+              {(avatarPreview ?? profile.avatar_url) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarPreview ?? profile.avatar_url!}
+                  alt="couverture"
+                  className="absolute inset-0 h-full w-full object-cover object-top"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-r from-sky-600 via-cyan-500 to-teal-500" />
+              )}
+              {/* Always-on subtle overlay for legibility */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-lg bg-black/35 hover:bg-black/50 transition-colors px-2.5 py-1.5 text-[11px] text-white"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+                Modifier la photo
+              </button>
+            </div>
+
+            <div className="relative px-5 pb-5 pt-14 sm:pt-16">
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute -top-12 sm:-top-14 left-5 h-24 w-24 sm:h-28 sm:w-28 rounded-full ring-4 ring-white overflow-hidden group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                aria-label="Changer l'avatar"
+              >
+                {avatarPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarPreview} alt="aperçu" className="h-full w-full object-cover" />
+                ) : profile.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profile.avatar_url} alt="avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-sky-600 to-cyan-500 text-white text-2xl font-semibold">
+                    {initials}
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                </div>
+              </button>
+
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
+              />
+
+              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">{profileForm.name || 'Utilisateur'}</h2>
+                  <p className="text-sm text-slate-500">{profileForm.email}</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {avatarFile ? `Fichier sélectionné: ${avatarFile.name}` : "Cliquez sur la photo pour changer l'avatar."}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="px-3 py-1.5 border border-slate-300 text-slate-700 rounded-lg text-xs hover:bg-slate-50 transition-colors"
+                  >
+                    Choisir une image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={uploadAvatar}
+                    disabled={!avatarFile}
+                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs disabled:opacity-40 hover:bg-blue-700 transition-colors"
+                  >
+                    Enregistrer
+                  </button>
+                  {avatarFile && (
+                    <button
+                      type="button"
+                      onClick={() => { setAvatarFile(null); if (avatarInputRef.current) avatarInputRef.current.value = ''; }}
+                      className="px-3 py-1.5 border border-slate-300 text-slate-600 rounded-lg text-xs hover:bg-slate-50 transition-colors"
+                    >
+                      Annuler
+                    </button>
+                  )}
+                  {profile.avatar_url && !avatarFile && (
+                    <button
+                      type="button"
+                      onClick={deleteAvatar}
+                      className="px-3 py-1.5 border border-red-200 text-red-500 rounded-lg text-xs hover:bg-red-50 transition-colors"
+                    >
+                      Supprimer
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
           {isSectionVisible('Informations personnelles') && (
             <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
               <h2 className="text-sm font-semibold text-slate-900">Informations personnelles</h2>
@@ -260,26 +413,7 @@ export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: {
             </section>
           )}
 
-          {isSectionVisible('Avatar') && (
-            <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
-              <h2 className="text-sm font-semibold text-slate-900">Avatar</h2>
-              <div className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-full overflow-hidden bg-slate-100 border border-slate-200">
-                  {profile.avatar_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profile.avatar_url} alt="avatar" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center text-xs text-slate-400">Aucun</div>
-                  )}
-                </div>
-                <div className="flex-1 flex items-center gap-2">
-                  <input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)} className="text-xs" />
-                  <button type="button" onClick={uploadAvatar} disabled={!avatarFile} className="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs disabled:opacity-50">Uploader</button>
-                  <button type="button" onClick={deleteAvatar} className="px-3 py-2 border border-red-300 text-red-600 rounded-lg text-xs">Supprimer</button>
-                </div>
-              </div>
-            </section>
-          )}
+          
 
           {isSectionVisible('Mot de passe') && (
             <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
@@ -306,66 +440,139 @@ export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: {
 
           {isSectionVisible('Authentification 2FA') && (
             <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold text-slate-900">Authentification 2FA</h2>
-            <p className="text-xs text-slate-500">
-              Statut: <span className={profile.two_factor.enabled ? 'text-emerald-600 font-medium' : 'text-slate-600 font-medium'}>{profile.two_factor.enabled ? 'activée' : 'désactivée'}</span>
-              {' '}· Recovery codes: {profile.two_factor.recovery_codes_count}
-            </p>
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-slate-900">Authentification 2FA</h2>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${profile.two_factor.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                  {profile.two_factor.enabled ? 'Activée' : 'Désactivée'}
+                </span>
+              </div>
 
-            {!profile.two_factor.enabled && (
-              <div className="space-y-3">
+              {profile.two_factor.enabled && (
+                <p className="text-xs text-slate-500">Recovery codes restants : <span className="font-medium text-slate-700">{profile.two_factor.recovery_codes_count}</span></p>
+              )}
+
+              {/* ── Setup flow (just called /enable) ── */}
+              {!profile.two_factor.enabled && pendingSetup && (
+                <div className="space-y-4">
+                  <p className="text-xs text-slate-600">Scannez ce QR code avec votre application OTP (Google Authenticator, Authy…)</p>
+                  <div className="flex justify-center p-4 bg-white border border-slate-200 rounded-xl w-fit mx-auto">
+                    <QRCode value={pendingSetup.otpauth_uri} size={160} />
+                  </div>
+                  <details className="text-xs text-slate-500">
+                    <summary className="cursor-pointer hover:text-slate-700">Saisie manuelle du secret</summary>
+                    <code className="block mt-1 font-mono break-all bg-slate-50 border border-slate-200 rounded p-2 text-slate-800 select-all">{pendingSetup.secret}</code>
+                  </details>
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="block text-xs text-slate-500 mb-1">Code OTP (6 chiffres)</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        placeholder="123456"
+                        value={verifyOtp}
+                        onChange={(e) => setVerifyOtp(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm tracking-widest"
+                      />
+                    </div>
+                    <button type="button" onClick={verifyTwoFactor} className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs">Valider</button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Pending (page refreshed mid-setup) ── */}
+              {!profile.two_factor.enabled && !pendingSetup && profile.two_factor.pending && (
+                <div className="space-y-3">
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                    Un setup 2FA est en cours. Entrez le code de votre application pour finaliser, ou relancez le setup.
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="block text-xs text-slate-500 mb-1">Code OTP (6 chiffres)</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        placeholder="123456"
+                        value={verifyOtp}
+                        onChange={(e) => setVerifyOtp(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm tracking-widest"
+                      />
+                    </div>
+                    <button type="button" onClick={verifyTwoFactor} className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs">Valider</button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Activate form (not enabled, no pending) ── */}
+              {!profile.two_factor.enabled && !profile.two_factor.pending && !pendingSetup && (
                 <div className="flex items-end gap-2">
                   <div className="flex-1">
-                    <label className="block text-xs text-slate-500 mb-1">Mot de passe actuel (activer 2FA)</label>
+                    <label className="block text-xs text-slate-500 mb-1">Mot de passe actuel</label>
                     <input type="password" value={enablePassword} onChange={(e) => setEnablePassword(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
                   </div>
-                  <button type="button" onClick={startTwoFactorSetup} className="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs">Générer secret</button>
+                  <button type="button" onClick={startTwoFactorSetup} className="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs whitespace-nowrap">Activer la 2FA</button>
                 </div>
+              )}
 
-                {pendingSetup && (
-                  <div className="border border-slate-200 rounded-lg p-3 space-y-2">
-                    <p className="text-xs text-slate-600">Secret: <span className="font-mono text-slate-900">{pendingSetup.secret}</span></p>
-                    <p className="text-xs text-slate-600 break-all">URI: {pendingSetup.otpauth_uri}</p>
-                    <div className="flex items-end gap-2">
-                      <div className="flex-1">
-                        <label className="block text-xs text-slate-500 mb-1">Code OTP pour confirmer</label>
-                        <input value={verifyOtp} onChange={(e) => setVerifyOtp(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                      </div>
-                      <button type="button" onClick={verifyTwoFactor} className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs">Valider</button>
+              {/* ── Restart setup link when pending ── */}
+              {!profile.two_factor.enabled && profile.two_factor.pending && !pendingSetup && (
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-slate-400 hover:text-slate-600">Relancer le setup (nouveau QR code)</summary>
+                  <div className="flex items-end gap-2 mt-2">
+                    <div className="flex-1">
+                      <label className="block text-xs text-slate-500 mb-1">Mot de passe actuel</label>
+                      <input type="password" value={enablePassword} onChange={(e) => setEnablePassword(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
                     </div>
+                    <button type="button" onClick={startTwoFactorSetup} className="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs whitespace-nowrap">Nouveau QR</button>
                   </div>
-                )}
-              </div>
-            )}
+                </details>
+              )}
 
-            {profile.two_factor.enabled && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border border-slate-200 rounded-lg p-3 space-y-2">
-                  <p className="text-xs font-medium text-slate-700">Désactiver 2FA</p>
-                  <input type="password" placeholder="Mot de passe actuel" value={disableForm.current_password} onChange={(e) => setDisableForm((f) => ({ ...f, current_password: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                  <input placeholder="Code OTP" value={disableForm.otp_code} onChange={(e) => setDisableForm((f) => ({ ...f, otp_code: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                  <button type="button" onClick={disableTwoFactor} className="px-3 py-2 border border-red-300 text-red-600 rounded-lg text-xs">Désactiver</button>
-                </div>
+              {/* ── Enabled: disable + regen recovery codes ── */}
+              {profile.two_factor.enabled && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="border border-slate-200 rounded-lg p-3 space-y-2">
+                    <p className="text-xs font-medium text-slate-700">Désactiver la 2FA</p>
+                    <input type="password" placeholder="Mot de passe actuel" value={disableForm.current_password} onChange={(e) => setDisableForm((f) => ({ ...f, current_password: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                    <input type="text" inputMode="numeric" placeholder="Code OTP" value={disableForm.otp_code} onChange={(e) => setDisableForm((f) => ({ ...f, otp_code: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm tracking-widest" />
+                    <button type="button" onClick={disableTwoFactor} className="px-3 py-2 border border-red-300 text-red-600 rounded-lg text-xs">Désactiver</button>
+                  </div>
 
-                <div className="border border-slate-200 rounded-lg p-3 space-y-2">
-                  <p className="text-xs font-medium text-slate-700">Régénérer recovery codes</p>
-                  <input type="password" placeholder="Mot de passe actuel" value={recoveryForm.current_password} onChange={(e) => setRecoveryForm((f) => ({ ...f, current_password: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                  <input placeholder="Code OTP" value={recoveryForm.otp_code} onChange={(e) => setRecoveryForm((f) => ({ ...f, otp_code: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                  <button type="button" onClick={regenerateRecoveryCodes} className="px-3 py-2 bg-slate-800 text-white rounded-lg text-xs">Régénérer</button>
+                  <div className="border border-slate-200 rounded-lg p-3 space-y-2">
+                    <p className="text-xs font-medium text-slate-700">Régénérer les recovery codes</p>
+                    <input type="password" placeholder="Mot de passe actuel" value={recoveryForm.current_password} onChange={(e) => setRecoveryForm((f) => ({ ...f, current_password: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                    <input type="text" inputMode="numeric" placeholder="Code OTP" value={recoveryForm.otp_code} onChange={(e) => setRecoveryForm((f) => ({ ...f, otp_code: e.target.value }))} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm tracking-widest" />
+                    <button type="button" onClick={regenerateRecoveryCodes} className="px-3 py-2 bg-slate-800 text-white rounded-lg text-xs">Régénérer</button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {freshRecoveryCodes.length > 0 && (
-              <div className="border border-amber-200 bg-amber-50 rounded-lg p-3">
-                <p className="text-xs text-amber-900 font-medium mb-1">Recovery codes (à sauvegarder)</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {freshRecoveryCodes.map((code) => (
-                    <code key={code} className="text-xs text-amber-900 bg-white border border-amber-200 rounded px-2 py-1">{code}</code>
-                  ))}
+              {/* ── Fresh recovery codes (show once after verify or regen) ── */}
+              {freshRecoveryCodes.length > 0 && (
+                <div className="border border-amber-200 bg-amber-50 rounded-lg p-3 space-y-2">
+                  <p className="text-xs text-amber-900 font-medium">Recovery codes — sauvegardez-les maintenant, ils ne seront plus affichés.</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {freshRecoveryCodes.map((code) => (
+                      <code key={code} className="text-xs text-amber-900 bg-white border border-amber-200 rounded px-2 py-1 font-mono select-all">{code}</code>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const text = freshRecoveryCodes.join('\n');
+                      const blob = new Blob([text], { type: 'text/plain' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url; a.download = 'taxiads-recovery-codes.txt'; a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="text-xs text-amber-700 underline hover:text-amber-900"
+                  >
+                    Télécharger (.txt)
+                  </button>
                 </div>
-              </div>
-            )}
+              )}
             </section>
           )}
 
