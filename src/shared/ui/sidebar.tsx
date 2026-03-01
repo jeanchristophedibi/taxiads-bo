@@ -4,6 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useSidebar } from './sidebar-context';
+import { env } from '@/shared/config/env';
+import { fetchDocsLinks } from '@/modules/docs/infrastructure/fetch-docs-links';
+import { trackDocsLinkClick } from '@/modules/docs/presentation/lib/track-docs-link-click';
+import { resolveDocumentationUrl } from '@/modules/docs/presentation/lib/resolve-documentation-url';
+import { getDocsFallbackUrl } from '@/modules/docs/domain/docs-links';
 
 /* ─── Icons ─────────────────────────────────────────────────────────────── */
 const icons = {
@@ -97,6 +102,12 @@ const icons = {
       <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
     </svg>
   ),
+  documentation: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  ),
 };
 
 /* ─── Nav definition ─────────────────────────────────────────────────────── */
@@ -134,6 +145,12 @@ const NAV: NavGroup[] = [
       { href: '/localisations', label: 'Localisations', icon: icons.locations },
     ],
   },
+  {
+    label: 'Aide',
+    children: [
+      { href: '/aide', label: 'Aide', icon: icons.documentation },
+    ],
+  },
 ];
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
@@ -145,7 +162,37 @@ export function Sidebar() {
   const pathname = usePathname();
   const { isOpen, close } = useSidebar();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [openingDocs, setOpeningDocs] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const openDocumentation = async () => {
+    if (openingDocs) return;
+    setOpeningDocs(true);
+
+    const popup = typeof window !== 'undefined'
+      ? window.open('about:blank', '_blank', 'noopener,noreferrer')
+      : null;
+
+    const navigate = (url: string) => {
+      if (popup) {
+        popup.location.href = url;
+        return;
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+    };
+
+    try {
+      const resolved = await resolveDocumentationUrl(fetchDocsLinks, getDocsFallbackUrl(env.apiBaseUrl));
+      trackDocsLinkClick({
+        source: 'sidebar',
+        key: resolved.fallback ? 'fallback_local_docs' : 'documentation_main',
+        url: resolved.url,
+      });
+      navigate(resolved.url);
+    } finally {
+      setOpeningDocs(false);
+    }
+  };
 
   useEffect(() => { setIsProfileOpen(false); close(); }, [pathname, close]);
 
@@ -248,6 +295,16 @@ export function Sidebar() {
             </div>
           );
         })}
+
+        <button
+          type="button"
+          onClick={() => void openDocumentation()}
+          disabled={openingDocs}
+          className="mt-4 w-full animate-nav-item flex items-center gap-3 px-3 py-2.5 rounded-apple text-sm font-medium transition-all duration-200 ease-apple text-white/50 hover:text-white/80 hover:bg-white/5 disabled:opacity-50"
+        >
+          <span className="text-white/40">{icons.documentation}</span>
+          Documentation
+        </button>
       </nav>
 
       {/* ── Profile ──────────────────────────────────────────────────── */}
