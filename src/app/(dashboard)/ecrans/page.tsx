@@ -13,7 +13,7 @@ import { PendingDeviceRequestsTable } from '@/modules/screens/presentation/compo
 import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 type ViewMode = 'table' | 'grid';
-type Tab = 'screens' | 'requests' | 'groups';
+type Tab = 'all' | 'screens' | 'requests' | 'groups';
 
 const STATUS_FILTERS: { value: ScreenStatus | ''; label: string; dot?: string; active: string; inactive: string }[] = [
   { value: '',              label: 'Tous',           active: 'bg-slate-800 text-white',          inactive: 'bg-slate-100 text-slate-500 hover:bg-slate-200' },
@@ -52,13 +52,10 @@ export default function EcransPage() {
     : kpisData?.ok
       ? (kpisData.value.devices?.pendingAccessRequests ?? kpisData.value.screens.uninitialized ?? 0)
       : 0;
-  const isRequestsTab = tab === 'requests';
-  const effectiveStatus = isRequestsTab ? 'uninitialized' : status || undefined;
-  const excludedStatuses = !isRequestsTab && !status ? (['uninitialized'] as ScreenStatus[]) : undefined;
 
   useEffect(() => {
     const queryTab = searchParams.get('tab');
-    const nextTab: Tab = queryTab === 'requests' || queryTab === 'groups' ? queryTab : 'screens';
+    const nextTab: Tab = queryTab === 'all' || queryTab === 'requests' || queryTab === 'groups' ? queryTab : 'screens';
     setTab((current) => (current === nextTab ? current : nextTab));
     setTabReady(true);
   }, [searchParams]);
@@ -71,6 +68,11 @@ export default function EcransPage() {
     const next = params.toString();
     router.replace(next ? `/ecrans?${next}` : '/ecrans');
   }, [router, searchParams, tab]);
+
+  const isAllTab = tab === 'all';
+  const isRequestsTab = tab === 'requests';
+  const effectiveStatus = isRequestsTab ? 'uninitialized' : status || undefined;
+  const excludedStatuses = isAllTab ? undefined : !isRequestsTab && !status ? (['uninitialized'] as ScreenStatus[]) : undefined;
 
   if (!can('screens.read')) {
     return <div className="text-sm text-slate-500">Acces non autorise.</div>;
@@ -147,13 +149,21 @@ export default function EcransPage() {
 
       <div className="card overflow-hidden">
         {/* Tabs */}
+        
         <div className="flex border-b border-slate-100">
+          <button
+            type="button"
+            onClick={() => handleTabChange('all')}
+            className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${tab === 'all' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+            Tous les écrans
+          </button>
           <button
             type="button"
             onClick={() => handleTabChange('screens')}
             className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${tab === 'screens' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
           >
-            Écrans
+            Écrans actifs
           </button>
           <button
             type="button"
@@ -176,7 +186,7 @@ export default function EcransPage() {
           </button>
         </div>
 
-        {(tab === 'screens' || tab === 'requests') && (
+        {(tab === 'screens' || tab === 'all' || tab === 'requests') && (
           <>
             <div className="toolbar">
               <div className="relative flex-1 max-w-xs">
@@ -185,7 +195,7 @@ export default function EcransPage() {
                 </svg>
                 <input
                   type="text"
-                    placeholder={isRequestsTab ? 'Rechercher une demande…' : 'Rechercher un écran…'}
+                    placeholder={isRequestsTab ? 'Rechercher une nouvelle demande…' : 'Rechercher un écran…'}
                     value={search}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     className="input pl-9"
@@ -256,6 +266,41 @@ export default function EcransPage() {
                 page={page}
                 onPageChange={setPage}
               />
+            ) : isAllTab ? (
+              <>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="px-5 pt-4 pb-2 text-sm font-semibold text-slate-900">Demandes en attente</h3>
+                    <PendingDeviceRequestsTable
+                      search={search || undefined}
+                      page={page}
+                      onPageChange={setPage}
+                    />
+                  </div>
+                  <div>
+                    <h3 className="px-5 pt-4 pb-2 text-sm font-semibold text-slate-900">Écrans actifs</h3>
+                    {viewMode === 'table' ? (
+                      <ScreensTable
+                        search={search || undefined}
+                        status={effectiveStatus}
+                        excludeStatuses={excludedStatuses}
+                        requestsOnly={isRequestsTab}
+                        page={page}
+                        onPageChange={setPage}
+                      />
+                    ) : (
+                      <ScreensGrid
+                        search={search || undefined}
+                        status={effectiveStatus}
+                        excludeStatuses={excludedStatuses}
+                        requestsOnly={isRequestsTab}
+                        page={page}
+                        onPageChange={setPage}
+                      />
+                    )}
+                  </div>
+                </div>
+              </>
             ) : viewMode === 'table' ? (
               <ScreensTable
                 search={search || undefined}

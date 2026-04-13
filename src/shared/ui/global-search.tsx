@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getAuthUserFromCookie, hasPermission } from '@/shared/application/auth-context';
+import { performLogout } from '@/shared/application/logout';
 
 type GlobalScope = {
   key: string;
@@ -295,19 +296,18 @@ export function GlobalSearchBar() {
           >
             Mon profil
           </Link>
-          <form
-            action="/api/logout"
-            method="post"
-            className="border-t border-white/10"
-            onSubmit={(e) => e.stopPropagation()}
-          >
+          <div className="border-t border-white/10">
             <button
-              type="submit"
+              type="button"
+              onClick={() => {
+                setProfileOpen(false);
+                void performLogout(router);
+              }}
               className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10 transition-colors"
             >
               Déconnexion
             </button>
-          </form>
+          </div>
         </div>,
         document.body
       )}

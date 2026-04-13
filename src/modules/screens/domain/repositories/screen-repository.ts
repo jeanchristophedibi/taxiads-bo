@@ -41,6 +41,7 @@ export interface ScreenRepository {
   unassignPlaylist(id: string): Promise<Result<void, AppError>>;
   updateStatus(id: string, status: ScreenStatus): Promise<Result<void, AppError>>;
   validateCode(validationCode: string): Promise<Result<void, AppError>>;
+  rejectDeviceRequest(deviceId: string): Promise<Result<void, AppError>>;
   emergency(id: string, type: EmergencyType, payload?: CustomEmergencyPayload): Promise<Result<void, AppError>>;
 
   getMap(params?: {
