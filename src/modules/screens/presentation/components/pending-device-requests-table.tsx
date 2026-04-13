@@ -5,7 +5,7 @@ import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 import { useToast } from '@/shared/ui/toast-provider';
 import type { AppError } from '@/shared/domain/app-error';
 import { ScreenValidationCodeModal } from './screen-validation-code-modal';
-import { useValidateDeviceCodeMutation } from '../hooks/use-screen-mutations';
+import { useRejectDeviceRequestMutation, useValidateDeviceCodeMutation } from '../hooks/use-screen-mutations';
 import { usePendingDeviceRequestsQuery } from '../hooks/use-pending-device-requests-query';
 
 const extractValidationError = (error: unknown): string => {
@@ -28,6 +28,7 @@ export function PendingDeviceRequestsTable({ search, page = 1, onPageChange }: P
   const { can } = useAuthPermissions();
   const toast = useToast();
   const validateCode = useValidateDeviceCodeMutation();
+  const rejectRequest = useRejectDeviceRequestMutation();
   const { data, isLoading, isError } = usePendingDeviceRequestsQuery({ search, page, perPage: 20 });
   const [openFor, setOpenFor] = useState<{ title: string; validationCode: string | null } | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -61,7 +62,7 @@ export function PendingDeviceRequestsTable({ search, page = 1, onPageChange }: P
               <th>Device</th>
               <th>Type</th>
               <th>Écran lié</th>
-              <th>Code</th>
+              <th>Code pairing</th>
               <th>Demandé le</th>
               <th>Note</th>
               <th className="w-12" />
@@ -74,7 +75,7 @@ export function PendingDeviceRequestsTable({ search, page = 1, onPageChange }: P
                   <p className="text-sm font-medium text-slate-900">{item.hostname || 'Device sans hostname'}</p>
                   <p className="text-xs text-slate-400 mt-0.5">{item.androidId || item.fingerprint || item.id}</p>
                 </td>
-                <td className="text-sm text-slate-600">{item.clientType || 'screen'}</td>
+                <td className="text-sm text-slate-600">{item.clientType === 'mobile' ? 'Mobile' : 'Screen Flutter'}</td>
                 <td className="text-sm text-slate-600">
                   {item.screen ? (
                     <div>
@@ -99,22 +100,47 @@ export function PendingDeviceRequestsTable({ search, page = 1, onPageChange }: P
                 </td>
                 <td className="text-sm text-slate-500">{item.accessRequestNotes || '—'}</td>
                 <td className="px-3">
-                  {can('devices.validate_code') && item.validationCode ? (
-                    <button
-                      type="button"
-                      className="btn-primary text-xs px-3 py-1"
-                      disabled={validateCode.isPending}
-                      onClick={() => {
-                        setValidationError(null);
-                        setOpenFor({
-                          title: `Valider ${item.hostname || item.androidId || 'ce device'}`,
-                          validationCode: item.validationCode,
-                        });
-                      }}
-                    >
-                      {validateCode.isPending ? 'Validation…' : 'Valider'}
-                    </button>
-                  ) : null}
+                  <div className="flex items-center gap-2">
+                    {can('devices.validate_code') ? (
+                      <button
+                        type="button"
+                        className="btn-primary text-xs px-3 py-1"
+                        disabled={validateCode.isPending || rejectRequest.isPending}
+                        onClick={() => {
+                          setValidationError(null);
+                          setOpenFor({
+                            title: `Valider ${item.hostname || item.androidId || 'ce device'}`,
+                            validationCode: item.validationCode,
+                          });
+                        }}
+                      >
+                        {validateCode.isPending ? 'Validation…' : 'Valider'}
+                      </button>
+                    ) : null}
+                    {can('devices.write') ? (
+                      <button
+                        type="button"
+                        className="btn-secondary text-xs px-3 py-1 text-rose-600"
+                        disabled={rejectRequest.isPending || validateCode.isPending}
+                        onClick={() => {
+                          rejectRequest.mutate(item.id, {
+                            onSuccess: (res) => {
+                              if (res && !res.ok) {
+                                toast.error('Refus impossible', res.error.message);
+                                return;
+                              }
+                              toast.success('Demande refusée');
+                            },
+                            onError: (err) => {
+                              toast.error('Refus impossible', (err as Error).message);
+                            },
+                          });
+                        }}
+                      >
+                        {rejectRequest.isPending ? 'Refus…' : 'Refuser'}
+                      </button>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -147,7 +173,7 @@ export function PendingDeviceRequestsTable({ search, page = 1, onPageChange }: P
       {openFor && (
         <ScreenValidationCodeModal
           title={openFor.title}
-          subtitle="Entrez le code de validation renvoyé par l'API pour approuver ce device."
+          subtitle="Entrez le code de pairing affiché sur le device. Le code peut être prérempli s'il est déjà disponible."
           isPending={validateCode.isPending}
           errorMessage={validationError}
           onClose={() => setOpenFor(null)}

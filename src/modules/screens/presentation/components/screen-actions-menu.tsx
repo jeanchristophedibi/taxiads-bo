@@ -10,18 +10,15 @@ import {
   useAssignPlaylistMutation,
   useUnassignPlaylistMutation,
   useEmergencyMutation,
-  useValidateDeviceCodeMutation,
 } from '../hooks/use-screen-mutations';
 import { AssignPlaylistModal } from './assign-playlist-modal';
 import { ScreenEditModal } from './screen-edit-modal';
 import { ScreenLiveDetailsModal } from './screen-live-details-modal';
-import { ScreenValidationCodeModal } from './screen-validation-code-modal';
 import { useToast } from '@/shared/ui/toast-provider';
-import type { AppError } from '@/shared/domain/app-error';
 import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-type ModalKind = 'assign-playlist' | 'edit' | 'custom-emergency' | 'live-details' | 'validate-otp' | null;
+type ModalKind = 'assign-playlist' | 'edit' | 'custom-emergency' | 'live-details' | null;
 
 /* ─── Emergency labels ───────────────────────────────────────────────────── */
 const EMERGENCY_ACTIONS: { type: EmergencyType; label: string; icon: React.ReactNode; danger?: boolean }[] = [
@@ -145,7 +142,6 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [modal, setModal] = useState<ModalKind>(null);
-  const [validationError, setValidationError] = useState<string | null>(null);
   const [dropPos, setDropPos] = useState<{ top?: number; bottom?: number; right: number; maxHeight?: number }>({ top: 0, right: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -155,7 +151,6 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
   const assignPl    = useAssignPlaylistMutation();
   const unassignPl  = useUnassignPlaylistMutation();
   const emergency   = useEmergencyMutation();
-  const validateCode = useValidateDeviceCodeMutation();
 
   /* Close on outside click */
   useEffect(() => {
@@ -189,22 +184,7 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
   const close = () => setOpen(false);
   const openModal = (kind: ModalKind) => {
     close();
-    if (kind === 'validate-otp') setValidationError(null);
     setModal(kind);
-  };
-
-  const extractValidationError = (error: unknown): string => {
-    const fallback = 'Code de validation invalide ou expire.';
-    if (!error || typeof error !== 'object') return fallback;
-
-    const appError = error as AppError;
-    const details = appError.details as { message?: string; errors?: { validation_code?: string[] } } | undefined;
-
-    const fieldMsg = details?.errors?.validation_code?.[0];
-    if (fieldMsg) return fieldMsg;
-    if (details?.message) return details.message;
-    if (appError.message) return appError.message;
-    return fallback;
   };
 
   const handleAction = (label: string, mutate: () => Promise<unknown>) => {
@@ -236,9 +216,8 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
   const canEmergency = can('screens.emergency');
   const canRefresh = can('screens.bulk_refresh');
   const canRestart = can('screens.bulk_restart');
-  const canValidate = can('devices.validate_code');
   const canManage = canWrite || canAssign;
-  const canControl = canValidate || canRead || canRefresh || canRestart;
+  const canControl = canRead || canRefresh || canRestart;
   const hasAnyAction = canControl || canManage || canEmergency;
 
   if (!hasAnyAction) return null;
@@ -267,11 +246,6 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
         >
           {canControl && (
             <Section label="Contrôle">
-              {canValidate && (
-                <Item label="Valider l'écran" icon={
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                } onClick={() => openModal('validate-otp')} disabled={screen.status !== 'uninitialized' || validateCode.isPending} />
-              )}
               {canRead && (
                 <Item label="Détails live" icon={
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" /><circle cx="12" cy="12" r="3" /></svg>
@@ -367,32 +341,6 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
 
       {modal === 'live-details' && canRead && (
         <ScreenLiveDetailsModal screen={screen} onClose={() => setModal(null)} />
-      )}
-
-      {modal === 'validate-otp' && canValidate && (
-        <ScreenValidationCodeModal
-          title={`Valider ${screen.name}`}
-          subtitle="Entrez le code de validation (6 chiffres) pour activer cet ecran."
-          isPending={validateCode.isPending}
-          errorMessage={validationError}
-          onClose={() => setModal(null)}
-          onConfirm={(validationCode) => {
-            setValidationError(null);
-            validateCode.mutate(validationCode, {
-              onSuccess: (res) => {
-                if (res && !res.ok) {
-                  setValidationError(extractValidationError(res.error));
-                  return;
-                }
-                toast.success('Écran validé');
-                setModal(null);
-              },
-              onError: (err) => {
-                setValidationError(extractValidationError(err));
-              },
-            });
-          }}
-        />
       )}
     </>
   );

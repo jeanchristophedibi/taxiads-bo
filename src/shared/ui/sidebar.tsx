@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useSidebar } from './sidebar-context';
 import { env } from '@/shared/config/env';
@@ -10,6 +10,7 @@ import { trackDocsLinkClick } from '@/modules/docs/presentation/lib/track-docs-l
 import { resolveDocumentationUrl } from '@/modules/docs/presentation/lib/resolve-documentation-url';
 import { getDocsFallbackUrl } from '@/modules/docs/domain/docs-links';
 import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
+import { performLogout } from '@/shared/application/logout';
 
 /* ─── Icons ─────────────────────────────────────────────────────────────── */
 const icons = {
@@ -161,6 +162,7 @@ const isActivePath = (pathname: string, href: string) =>
 /* ─── Component ──────────────────────────────────────────────────────────── */
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { can } = useAuthPermissions();
   const { isOpen, close } = useSidebar();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -347,15 +349,14 @@ export function Sidebar() {
                 <span>Mon profil</span>
               </Link>
               <div className="border-t border-white/5" />
-              <form action="/api/logout" method="post">
-                <button
-                  type="submit"
+              <button
+                  type="button"
+                  onClick={() => void performLogout(router)}
                   className="w-full flex items-center gap-2.5 px-4 py-3 text-left text-sm text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
                 >
                   {icons.logout}
                   <span>Déconnexion</span>
                 </button>
-              </form>
             </div>
           )}
         </div>

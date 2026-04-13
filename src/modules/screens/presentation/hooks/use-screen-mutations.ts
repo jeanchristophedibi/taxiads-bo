@@ -68,6 +68,15 @@ export const useValidateDeviceCodeMutation = () => {
   });
 };
 
+export const useRejectDeviceRequestMutation = () => {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (deviceId: string) =>
+      useRepo().rejectDeviceRequest(deviceId),
+    onSuccess: invalidate,
+  });
+};
+
 export const useUpdateScreenMutation = () => {
   const invalidate = useInvalidate();
   return useMutation({

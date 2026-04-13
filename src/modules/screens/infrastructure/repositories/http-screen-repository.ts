@@ -350,6 +350,17 @@ export class HttpScreenRepository implements ScreenRepository {
     );
   }
 
+  async rejectDeviceRequest(deviceId: string) {
+    return wrap(
+      () => this.httpClient.request({
+        path: '/bo/devices/reject-request',
+        method: 'POST',
+        body: { device_id: deviceId },
+      }).then(() => undefined),
+      'Failed to reject device request',
+    );
+  }
+
   async emergency(id: string, type: EmergencyType, payload?: CustomEmergencyPayload) {
     return wrap(
       () => this.httpClient.request({ path: `/bo/screens/${id}/emergency/${type}`, method: 'POST', body: payload }).then(() => undefined),
