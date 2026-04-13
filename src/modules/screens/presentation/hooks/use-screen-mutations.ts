@@ -9,7 +9,10 @@ const useRepo = () => makeScreensModule().screenRepository;
 
 const useInvalidate = () => {
   const qc = useQueryClient();
-  return () => qc.invalidateQueries({ queryKey: ['screens'] });
+  return () => {
+    qc.invalidateQueries({ queryKey: ['screens'] });
+    qc.invalidateQueries({ queryKey: ['device-requests'] });
+  };
 };
 
 /* ── Per-screen mutations ─────────────────────────────────────────────────── */

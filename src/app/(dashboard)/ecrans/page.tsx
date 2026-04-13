@@ -8,6 +8,8 @@ import { ScreenGroupsTable } from '@/modules/screen-groups/presentation/componen
 import type { ScreenStatus } from '@/modules/screens/domain/entities/screen';
 import { useKpisQuery } from '@/modules/dashboard/presentation/hooks/use-kpis-query';
 import { useScreensListQuery } from '@/modules/screens/presentation/hooks/use-screens-list-query';
+import { usePendingDeviceRequestsQuery } from '@/modules/screens/presentation/hooks/use-pending-device-requests-query';
+import { PendingDeviceRequestsTable } from '@/modules/screens/presentation/components/pending-device-requests-table';
 import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 type ViewMode = 'table' | 'grid';
@@ -27,6 +29,7 @@ export default function EcransPage() {
   const { can } = useAuthPermissions();
   const { data: kpisData } = useKpisQuery();
   const { data: pendingScreensData } = useScreensListQuery({ status: 'uninitialized', page: 1, perPage: 1 });
+  const { data: pendingDeviceRequestsData } = usePendingDeviceRequestsQuery({ page: 1, perPage: 1 });
   const [tab, setTab] = useState<Tab>('screens');
   const [tabReady, setTabReady] = useState(false);
   const [search, setSearch] = useState('');
@@ -42,7 +45,9 @@ export default function EcransPage() {
     setStatus('');
     setPage(1);
   };
-  const pendingCount = pendingScreensData?.ok
+  const pendingCount = pendingDeviceRequestsData?.ok
+    ? pendingDeviceRequestsData.value.meta.total
+    : pendingScreensData?.ok
     ? pendingScreensData.value.meta.total
     : kpisData?.ok
       ? (kpisData.value.devices?.pendingAccessRequests ?? kpisData.value.screens.uninitialized ?? 0)
@@ -245,7 +250,13 @@ export default function EcransPage() {
               </div>
             </div>
 
-            {viewMode === 'table' ? (
+            {isRequestsTab ? (
+              <PendingDeviceRequestsTable
+                search={search || undefined}
+                page={page}
+                onPageChange={setPage}
+              />
+            ) : viewMode === 'table' ? (
               <ScreensTable
                 search={search || undefined}
                 status={effectiveStatus}
