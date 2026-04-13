@@ -9,6 +9,7 @@ import { fetchDocsLinks } from '@/modules/docs/infrastructure/fetch-docs-links';
 import { trackDocsLinkClick } from '@/modules/docs/presentation/lib/track-docs-link-click';
 import { resolveDocumentationUrl } from '@/modules/docs/presentation/lib/resolve-documentation-url';
 import { getDocsFallbackUrl } from '@/modules/docs/domain/docs-links';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 /* ─── Icons ─────────────────────────────────────────────────────────────── */
 const icons = {
@@ -111,38 +112,38 @@ const icons = {
 };
 
 /* ─── Nav definition ─────────────────────────────────────────────────────── */
-type NavLink = { href: string; label: string; icon: React.ReactNode };
+type NavLink = { href: string; label: string; icon: React.ReactNode; permission?: string };
 type NavGroup = { label: string; icon?: React.ReactNode; children: NavLink[] };
 
 const NAV: NavGroup[] = [
   {
     label: 'Dashboard',
-    children: [{ href: '/dashboard', label: 'Dashboard', icon: icons.dashboard }],
+    children: [{ href: '/dashboard', label: 'Dashboard', icon: icons.dashboard, permission: 'dashboard.read' }],
   },
   {
     label: 'Diffusion',
     children: [
-      { href: '/ecrans',     label: 'Écrans',       icon: icons.screens },
-      { href: '/creatives',  label: 'Créatives',    icon: icons.creatives },
-      { href: '/artworks',   label: 'Artworks',     icon: icons.artworks },
-      { href: '/campagnes',  label: 'Campagnes',    icon: icons.campaigns },
-      { href: '/playlists',  label: 'Playlists',    icon: icons.playlists },
-      { href: '/play-logs',  label: 'Historique',   icon: icons.history },
-      { href: '/carte',      label: 'Carte',        icon: icons.map },
+      { href: '/ecrans',     label: 'Écrans',       icon: icons.screens, permission: 'screens.read' },
+      { href: '/creatives',  label: 'Créatives',    icon: icons.creatives, permission: 'creatives.read' },
+      { href: '/artworks',   label: 'Artworks',     icon: icons.artworks, permission: 'creatives.read' },
+      { href: '/campagnes',  label: 'Campagnes',    icon: icons.campaigns, permission: 'campaigns.read' },
+      { href: '/playlists',  label: 'Playlists',    icon: icons.playlists, permission: 'playlists.read' },
+      { href: '/play-logs',  label: 'Historique',   icon: icons.history, permission: 'audit.read' },
+      { href: '/carte',      label: 'Carte',        icon: icons.map, permission: 'locations.read' },
     ],
   },
   {
     label: 'Communication',
     children: [
-      { href: '/annonces', label: 'Annonces', icon: icons.announcements },
-      { href: '/programmes', label: 'Programmes', icon: icons.programs },
+      { href: '/annonces', label: 'Annonces', icon: icons.announcements, permission: 'announcements.read' },
+      { href: '/programmes', label: 'Programmes', icon: icons.programs, permission: 'schedule.read' },
     ],
   },
   {
     label: 'Ressources',
     children: [
-      { href: '/annonceurs',    label: 'Annonceurs',    icon: icons.advertisers },
-      { href: '/localisations', label: 'Localisations', icon: icons.locations },
+      { href: '/annonceurs',    label: 'Annonceurs',    icon: icons.advertisers, permission: 'campaigns.read' },
+      { href: '/localisations', label: 'Localisations', icon: icons.locations, permission: 'locations.read' },
     ],
   },
   {
@@ -160,6 +161,7 @@ const isActivePath = (pathname: string, href: string) =>
 /* ─── Component ──────────────────────────────────────────────────────────── */
 export function Sidebar() {
   const pathname = usePathname();
+  const { can } = useAuthPermissions();
   const { isOpen, close } = useSidebar();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [openingDocs, setOpeningDocs] = useState(false);
@@ -239,10 +241,12 @@ export function Sidebar() {
       {/* ── Nav ──────────────────────────────────────────────────────── */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {NAV.map((group) => {
+          const visibleChildren = group.children.filter((child) => !child.permission || can(child.permission));
+          if (visibleChildren.length === 0) return null;
 
           /* Single-item group → direct link */
-          if (group.children.length === 1) {
-            const only = group.children[0];
+          if (visibleChildren.length === 1) {
+            const only = visibleChildren[0];
             const active = isActivePath(pathname, only.href);
             return (
               <Link
@@ -269,7 +273,7 @@ export function Sidebar() {
                 {group.label}
               </p>
 
-              {group.children.map((child, idx) => {
+              {visibleChildren.map((child, idx) => {
                 const active = isActivePath(pathname, child.href);
                 return (
                   <Link

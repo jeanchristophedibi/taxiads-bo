@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { AnnouncementsTable } from '@/modules/announcements/presentation/components/announcements-table';
 import { AnnouncementCreateModal } from '@/modules/announcements/presentation/components/announcement-form-modal';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 export default function AnnouncesPage() {
+  const { can } = useAuthPermissions();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
@@ -13,6 +15,10 @@ export default function AnnouncesPage() {
     setSearch(value);
     setPage(1);
   };
+
+  if (!can('announcements.read')) {
+    return <div className="text-sm text-slate-500">Acces non autorise.</div>;
+  }
 
   return (
     <>
@@ -26,16 +32,18 @@ export default function AnnouncesPage() {
               Chaque annonce est automatiquement active entre sa date de début et sa date de fin.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            className="btn-primary shrink-0"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            Nouvelle annonce
-          </button>
+          {can('announcements.write') && (
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="btn-primary shrink-0"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Nouvelle annonce
+            </button>
+          )}
         </div>
 
         {/* Toolbar */}
@@ -58,7 +66,7 @@ export default function AnnouncesPage() {
         <AnnouncementsTable search={search || undefined} page={page} onPageChange={setPage} />
       </div>
 
-      {createOpen && <AnnouncementCreateModal onClose={() => setCreateOpen(false)} />}
+      {createOpen && can('announcements.write') && <AnnouncementCreateModal onClose={() => setCreateOpen(false)} />}
     </>
   );
 }

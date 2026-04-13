@@ -10,5 +10,7 @@ export const useScreensListQuery = (params?: ListScreensQuery) => {
   return useQuery({
     queryKey: ['screens', params],
     queryFn: () => listScreens.execute(params ?? {}),
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
   });
 };

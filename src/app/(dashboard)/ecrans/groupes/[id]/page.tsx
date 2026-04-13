@@ -7,6 +7,7 @@ import { ScreensGrid } from '@/modules/screens/presentation/components/screens-g
 import { useScreenGroupQuery } from '@/modules/screen-groups/presentation/hooks/use-screen-group-query';
 import { ScreenGroupFormModal } from '@/modules/screen-groups/presentation/components/screen-group-form-modal';
 import type { ScreenStatus } from '@/modules/screens/domain/entities/screen';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 type ViewMode = 'table' | 'grid';
 
@@ -28,6 +29,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export default function ScreenGroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { can } = useAuthPermissions();
   const { id } = use(params);
   const { data: group, isLoading: groupLoading } = useScreenGroupQuery(id);
 
@@ -39,6 +41,10 @@ export default function ScreenGroupDetailPage({ params }: { params: Promise<{ id
 
   const handleSearchChange = (value: string) => { setSearch(value); setPage(1); };
   const handleStatusChange = (value: ScreenStatus | '') => { setStatus(value); setPage(1); };
+
+  if (!can('screens.read')) {
+    return <div className="text-sm text-slate-500">Acces non autorise.</div>;
+  }
 
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
@@ -69,16 +75,18 @@ export default function ScreenGroupDetailPage({ params }: { params: Promise<{ id
               <p className="text-xs text-slate-400">Groupe d'écrans</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setEditOpen(true)}
-            className="btn-secondary"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-            Modifier
-          </button>
+          {can('screens.write') && (
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="btn-secondary"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              Modifier
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
@@ -191,7 +199,7 @@ export default function ScreenGroupDetailPage({ params }: { params: Promise<{ id
         )}
       </div>
 
-      {editOpen && group && <ScreenGroupFormModal group={group} onClose={() => setEditOpen(false)} />}
+      {editOpen && group && can('screens.write') && <ScreenGroupFormModal group={group} onClose={() => setEditOpen(false)} />}
     </div>
   );
 }

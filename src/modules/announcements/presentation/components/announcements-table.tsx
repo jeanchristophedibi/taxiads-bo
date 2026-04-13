@@ -5,6 +5,7 @@ import { useToggleAnnouncementMutation } from '../hooks/use-announcement-mutatio
 import { AnnouncementActionsMenu } from './announcement-actions-menu';
 import type { Announcement } from '../../domain/entities/announcement';
 import { useToast } from '@/shared/ui/toast-provider';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 interface Props {
   search?: string;
@@ -50,6 +51,8 @@ function ToggleSwitch({ announcement }: { announcement: Announcement }) {
 }
 
 export function AnnouncementsTable({ search, page, onPageChange }: Props) {
+  const { can } = useAuthPermissions();
+  const canWrite = can('announcements.write');
   const { data, isLoading, isError } = useAnnouncementsQuery({ search, page });
 
   if (isError) {
@@ -116,7 +119,7 @@ export function AnnouncementsTable({ search, page, onPageChange }: Props) {
                     <span>{fmtDatetime(a.endsAt)}</span>
                   </td>
                   <td className="px-5 py-3">
-                    <ToggleSwitch announcement={a} />
+                    {canWrite ? <ToggleSwitch announcement={a} /> : <span className="text-xs text-slate-400">—</span>}
                   </td>
                   <td className="px-5 py-3 text-xs text-slate-400 whitespace-nowrap">
                     {new Date(a.createdAt).toLocaleDateString('fr-FR')}

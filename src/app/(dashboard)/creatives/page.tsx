@@ -6,8 +6,10 @@ import { CreativesGrid } from '@/modules/creatives/presentation/components/creat
 import { CreativeCreateModal } from '@/modules/creatives/presentation/components/creative-create-modal';
 import { SelectField } from '@/shared/ui/select-field';
 import { useOptionsQuery } from '@/shared/application/use-options-query';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 export default function CreativesPage() {
+  const { can } = useAuthPermissions();
   const [search, setSearch] = useState('');
   const [campaignId, setCampaignId] = useState('');
   const [status, setStatus] = useState<'all' | 'active' | 'inactive'>('all');
@@ -23,6 +25,10 @@ export default function CreativesPage() {
   const handleCampaign = (v: string) => { setCampaignId(v); setPage(1); };
   const handleStatus = (v: 'all' | 'active' | 'inactive') => { setStatus(v); setPage(1); };
 
+  if (!can('creatives.read')) {
+    return <div className="text-sm text-slate-500">Acces non autorise.</div>;
+  }
+
   return (
     <>
     <div className="space-y-6">
@@ -31,12 +37,14 @@ export default function CreativesPage() {
           <h1 className="page-title">Créatives</h1>
           <p className="text-sm text-slate-500 mt-0.5">Médias publicitaires diffusés sur les écrans</p>
         </div>
-        <button type="button" onClick={() => setCreateOpen(true)} className="btn-primary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Ajouter
-        </button>
+        {can('creatives.write') && (
+          <button type="button" onClick={() => setCreateOpen(true)} className="btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Ajouter
+          </button>
+        )}
       </div>
 
       <div className="card overflow-hidden">
@@ -138,7 +146,7 @@ export default function CreativesPage() {
       </div>
     </div>
 
-    {createOpen && <CreativeCreateModal onClose={() => setCreateOpen(false)} />}
+    {createOpen && can('creatives.write') && <CreativeCreateModal onClose={() => setCreateOpen(false)} />}
     </>
   );
 }

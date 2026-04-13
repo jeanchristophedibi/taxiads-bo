@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PlaylistsTable } from '@/modules/playlists/presentation/components/playlists-table';
 import { PlaylistForm } from '@/modules/playlists/presentation/components/playlist-form';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 export default function PlaylistsPage() {
+  const { can } = useAuthPermissions();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -48,6 +50,10 @@ export default function PlaylistsPage() {
     updateUrl({ page: nextPage });
   };
 
+  if (!can('playlists.read')) {
+    return <div className="text-sm text-slate-500">Acces non autorise.</div>;
+  }
+
   return (
     <>
     <div className="space-y-6">
@@ -56,12 +62,14 @@ export default function PlaylistsPage() {
           <h1 className="page-title">Playlists</h1>
           <p className="text-sm text-slate-500 mt-0.5">Organisez vos contenus publicitaires en playlists</p>
         </div>
-        <button type="button" onClick={() => setCreateOpen(true)} className="btn-primary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Nouvelle playlist
-        </button>
+        {can('playlists.write') && (
+          <button type="button" onClick={() => setCreateOpen(true)} className="btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Nouvelle playlist
+          </button>
+        )}
       </div>
 
       <div className="card overflow-hidden">
@@ -88,7 +96,7 @@ export default function PlaylistsPage() {
       </div>
     </div>
 
-    {createOpen && <PlaylistForm onClose={() => setCreateOpen(false)} />}
+    {createOpen && can('playlists.write') && <PlaylistForm onClose={() => setCreateOpen(false)} />}
     </>
   );
 }

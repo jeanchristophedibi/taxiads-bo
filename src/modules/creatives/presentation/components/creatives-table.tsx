@@ -5,6 +5,7 @@ import { useToggleCreativeMutation } from '../hooks/use-creative-mutations';
 import { CreativeActionsMenu } from './creative-actions-menu';
 import { useToast } from '@/shared/ui/toast-provider';
 import type { Creative } from '../../domain/entities/creative';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 function mediaType(path: string | null): 'video' | 'image' | 'unknown' {
@@ -82,6 +83,8 @@ interface Props {
 }
 
 export function CreativesTable({ search, campaignId, isActive, page = 1, onPageChange }: Props) {
+  const { can } = useAuthPermissions();
+  const canWrite = can('creatives.write');
   const { data, isLoading, isError } = useCreativesQuery({ search, campaignId, isActive, page });
 
   if (isLoading) {
@@ -200,7 +203,7 @@ export function CreativesTable({ search, campaignId, isActive, page = 1, onPageC
                 </td>
 
                 {/* Toggle */}
-                <td><ActiveToggle creative={row} /></td>
+                <td>{canWrite ? <ActiveToggle creative={row} /> : <span className="text-xs text-slate-400">—</span>}</td>
 
                 {/* Actions */}
                 <td className="px-3"><CreativeActionsMenu creative={row} /></td>

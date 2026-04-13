@@ -5,7 +5,9 @@ import type { ScreenStatus } from '../../domain/entities/screen';
 import { useScreensListQuery } from '../hooks/use-screens-list-query';
 import { toScreenRowVm } from '../view-models/screen-view-model';
 import { ScreenActionsMenu } from './screen-actions-menu';
+import { ScreenValidateAction } from './screen-validate-action';
 import { BulkBar } from './bulk-bar';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 /* ─── Status badge ───────────────────────────────────────────────────────── */
 const STATUS_BADGE: Record<string, { bg: string; dot: string; label: string }> = {
@@ -43,12 +45,16 @@ function SkeletonRow() {
 interface Props {
   search?: string;
   status?: ScreenStatus;
+  excludeStatuses?: ScreenStatus[];
+  requestsOnly?: boolean;
   groupId?: string;
   page?: number;
   onPageChange?: (page: number) => void;
 }
 
-export function ScreensTable({ search, status, groupId, page = 1, onPageChange }: Props) {
+export function ScreensTable({ search, status, excludeStatuses, requestsOnly = false, groupId, page = 1, onPageChange }: Props) {
+  const { can } = useAuthPermissions();
+  const canBulkActions = !requestsOnly && can('screens.bulk_actions');
   const { data, isLoading, isError } = useScreensListQuery({ search, status, groupId, page, perPage: 20 });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -58,7 +64,7 @@ export function ScreensTable({ search, status, groupId, page = 1, onPageChange }
     return next;
   });
 
-  const screens = data?.ok ? data.value.data : [];
+  const screens = (data?.ok ? data.value.data : []).filter((screen) => !excludeStatuses?.includes(screen.status));
   const meta    = data?.ok ? data.value.meta : null;
   const allChecked = screens.length > 0 && screens.every((s) => selectedIds.has(s.id));
 
@@ -105,7 +111,7 @@ export function ScreensTable({ search, status, groupId, page = 1, onPageChange }
 
   return (
     <>
-      {selectedKeys.length > 0 && (
+      {canBulkActions && selectedKeys.length > 0 && (
         <BulkBar selectedKeys={selectedKeys} onClear={() => setSelectedIds(new Set())} />
       )}
 
@@ -113,13 +119,15 @@ export function ScreensTable({ search, status, groupId, page = 1, onPageChange }
         <thead>
           <tr className="tbl-head">
             <th className="w-10 px-4">
-              <input
-                type="checkbox"
-                checked={allChecked}
-                onChange={toggleAll}
-                className="rounded cursor-pointer"
-                title="Tout sélectionner"
-              />
+              {canBulkActions && (
+                <input
+                  type="checkbox"
+                  checked={allChecked}
+                  onChange={toggleAll}
+                  className="rounded cursor-pointer"
+                  title="Tout sélectionner"
+                />
+              )}
             </th>
             <th>Écran</th>
             <th>Playlist</th>
@@ -136,12 +144,14 @@ export function ScreensTable({ search, status, groupId, page = 1, onPageChange }
             return (
               <tr key={screen.id} className={checked ? 'bg-blue-50/60' : ''}>
                 <td className="px-4">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggle(screen.id)}
-                    className="rounded cursor-pointer"
-                  />
+                  {canBulkActions && (
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggle(screen.id)}
+                      className="rounded cursor-pointer"
+                    />
+                  )}
                 </td>
                 <td>
                   <p className="text-sm font-medium text-slate-900">{vm.name}</p>
@@ -157,7 +167,7 @@ export function ScreensTable({ search, status, groupId, page = 1, onPageChange }
                 <td><StatusBadge status={vm.status} /></td>
                 <td className="text-xs text-slate-400 tabular-nums">{vm.lastSeen !== '—' ? vm.lastSeen.replace('T', ' ').slice(0, 16) : '—'}</td>
                 <td className="px-3">
-                  <ScreenActionsMenu screen={screen} />
+                  {requestsOnly ? <ScreenValidateAction screen={screen} /> : <ScreenActionsMenu screen={screen} />}
                 </td>
               </tr>
             );

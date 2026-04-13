@@ -7,8 +7,10 @@ import { useDeleteScheduleEntryMutation } from '../hooks/use-schedule-entry-muta
 import { ScheduleEntryFormModal } from './schedule-entry-form-modal';
 import { useToast } from '@/shared/ui/toast-provider';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 export function ScheduleEntryActionsMenu({ scheduleEntry }: { scheduleEntry: ScheduleEntry }) {
+  const { can } = useAuthPermissions();
   const toast = useToast();
   const confirm = useConfirm();
   const [open, setOpen] = useState(false);
@@ -59,6 +61,10 @@ export function ScheduleEntryActionsMenu({ scheduleEntry }: { scheduleEntry: Sch
     });
   };
 
+  const canWrite = can('schedule.write');
+  const canDelete = can('schedule.delete');
+  if (!canWrite && !canDelete) return null;
+
   return (
     <>
       <button
@@ -79,35 +85,41 @@ export function ScheduleEntryActionsMenu({ scheduleEntry }: { scheduleEntry: Sch
           style={{ position: 'fixed', top: dropPos.top, bottom: dropPos.bottom, right: dropPos.right, zIndex: 9999, minWidth: 160, borderColor: 'var(--apple-separator)' }}
           className="bg-white rounded-apple-lg border py-1 shadow-apple-lg"
         >
-          <button
-            type="button"
-            onClick={() => { close(); setEditOpen(true); }}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 text-left"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-            Modifier
-          </button>
+          {canWrite && (
+            <button
+              type="button"
+              onClick={() => { close(); setEditOpen(true); }}
+              className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 text-left"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              Modifier
+            </button>
+          )}
 
-          <div style={{ height: 1, backgroundColor: 'var(--apple-separator)', margin: '2px 0' }} />
+          {canDelete && (
+            <>
+              <div style={{ height: 1, backgroundColor: 'var(--apple-separator)', margin: '2px 0' }} />
 
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deleteMutation.isPending}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 text-left disabled:opacity-40"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
-            </svg>
-            Supprimer
-          </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 text-left disabled:opacity-40"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+                </svg>
+                Supprimer
+              </button>
+            </>
+          )}
         </div>,
         document.body,
       )}
 
-      {editOpen && <ScheduleEntryFormModal scheduleEntry={scheduleEntry} onClose={() => setEditOpen(false)} />}
+      {editOpen && canWrite && <ScheduleEntryFormModal scheduleEntry={scheduleEntry} onClose={() => setEditOpen(false)} />}
     </>
   );
 }

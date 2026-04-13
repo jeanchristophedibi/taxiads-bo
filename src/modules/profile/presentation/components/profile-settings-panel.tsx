@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'react-qr-code';
 import { useToast } from '@/shared/ui/toast-provider';
+import { updateAuthUserCookie } from '@/shared/application/auth-context';
 
 type ProfileData = {
   id: string;
@@ -29,9 +30,7 @@ const getAuthToken = (): string | null => {
 };
 
 const setAuthUserCookie = (name: string, email: string, avatar_url?: string | null) => {
-  const maxAge = 60 * 60 * 24 * 7;
-  document.cookie = `auth_user=${encodeURIComponent(JSON.stringify({ name, email, avatar_url: avatar_url ?? null }))}; path=/; max-age=${maxAge}; samesite=lax`;
-  window.dispatchEvent(new Event('auth-user-updated'));
+  updateAuthUserCookie({ name, email, avatar_url: avatar_url ?? null });
 };
 
 export function ProfileSettingsPanel({ showTitle = true, sectionFilter = '' }: { showTitle?: boolean; sectionFilter?: string }) {

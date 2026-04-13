@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { ArtworksGrid } from '@/modules/artworks/presentation/components/artworks-grid';
 import { ArtworksTable } from '@/modules/artworks/presentation/components/artworks-table';
 import { ArtworkCreateModal } from '@/modules/artworks/presentation/components/artwork-create-modal';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 type ViewMode = 'grid' | 'table';
 
 export default function ArtworksPage() {
+  const { can } = useAuthPermissions();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -17,6 +19,10 @@ export default function ArtworksPage() {
     setSearch(value);
     setPage(1);
   };
+
+  if (!can('creatives.read')) {
+    return <div className="text-sm text-slate-500">Acces non autorise.</div>;
+  }
 
   const query = { search: search || undefined };
 
@@ -33,16 +39,18 @@ export default function ArtworksPage() {
             horizontal&nbsp;(16:9), vertical&nbsp;(9:16) et bannière.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className="btn-primary shrink-0"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Nouvel artwork
-        </button>
+        {can('creatives.write') && (
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="btn-primary shrink-0"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Nouvel artwork
+          </button>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -101,7 +109,7 @@ export default function ArtworksPage() {
       }
     </div>
 
-    {createOpen && <ArtworkCreateModal onClose={() => setCreateOpen(false)} />}
+    {createOpen && can('creatives.write') && <ArtworkCreateModal onClose={() => setCreateOpen(false)} />}
     </>
   );
 }

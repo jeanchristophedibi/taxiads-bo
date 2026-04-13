@@ -5,8 +5,10 @@ import { ScheduleEntriesTable } from '@/modules/schedule-entries/presentation/co
 import { ScheduleEntryFormModal } from '@/modules/schedule-entries/presentation/components/schedule-entry-form-modal';
 import { useOptionsQuery } from '@/shared/application/use-options-query';
 import { SelectField } from '@/shared/ui/select-field';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 export default function ProgrammesPage() {
+  const { can } = useAuthPermissions();
   const [search, setSearch] = useState('');
   const [roomKey, setRoomKey] = useState('');
   const [scheduleTypeKey, setScheduleTypeKey] = useState('');
@@ -23,6 +25,10 @@ export default function ProgrammesPage() {
 
   const resetPage = () => setPage(1);
 
+  if (!can('schedule.read')) {
+    return <div className="text-sm text-slate-500">Acces non autorise.</div>;
+  }
+
   return (
     <>
       <div className="space-y-5">
@@ -33,12 +39,14 @@ export default function ProgrammesPage() {
               Gérez les entrées de planning: salle, type, organisateur, horaires, flags et automatisation.
             </p>
           </div>
-          <button type="button" onClick={() => setCreateOpen(true)} className="btn-primary shrink-0">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            Nouveau programme
-          </button>
+          {can('schedule.write') && (
+            <button type="button" onClick={() => setCreateOpen(true)} className="btn-primary shrink-0">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Nouveau programme
+            </button>
+          )}
         </div>
 
         <div className="toolbar grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -95,7 +103,7 @@ export default function ProgrammesPage() {
         />
       </div>
 
-      {createOpen && <ScheduleEntryFormModal onClose={() => setCreateOpen(false)} />}
+      {createOpen && can('schedule.write') && <ScheduleEntryFormModal onClose={() => setCreateOpen(false)} />}
     </>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useScreenGroupsQuery } from '../hooks/use-screen-groups-query';
 import { ScreenGroupActionsMenu } from './screen-group-actions-menu';
 import { ScreenGroupFormModal } from './screen-group-form-modal';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 function SkeletonRow() {
   return (
@@ -19,6 +20,7 @@ function SkeletonRow() {
 }
 
 export function ScreenGroupsTable() {
+  const { can } = useAuthPermissions();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
@@ -46,12 +48,14 @@ export function ScreenGroupsTable() {
             className="input pl-9"
           />
         </div>
-        <button type="button" onClick={() => setCreateOpen(true)} className="btn-primary ml-auto">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Nouveau groupe
-        </button>
+        {can('screens.write') && (
+          <button type="button" onClick={() => setCreateOpen(true)} className="btn-primary ml-auto">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Nouveau groupe
+          </button>
+        )}
       </div>
 
       <div className="overflow-x-auto">
@@ -103,7 +107,7 @@ export function ScreenGroupsTable() {
         </div>
       )}
 
-      {createOpen && <ScreenGroupFormModal onClose={() => setCreateOpen(false)} />}
+      {createOpen && can('screens.write') && <ScreenGroupFormModal onClose={() => setCreateOpen(false)} />}
     </>
   );
 }

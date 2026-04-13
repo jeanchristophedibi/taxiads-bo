@@ -9,8 +9,10 @@ import { ScreenGroupFormModal } from './screen-group-form-modal';
 import { ScreenGroupAssignPlaylistModal } from './screen-group-assign-playlist-modal';
 import { useToast } from '@/shared/ui/toast-provider';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 export function ScreenGroupActionsMenu({ group }: { group: ScreenGroup }) {
+  const { can } = useAuthPermissions();
   const router = useRouter();
   const toast = useToast();
   const confirm = useConfirm();
@@ -58,6 +60,10 @@ export function ScreenGroupActionsMenu({ group }: { group: ScreenGroup }) {
     });
   };
 
+  const canWrite = can('screens.write');
+  const canDelete = can('screens.delete');
+  if (!canWrite && !canDelete) return null;
+
   return (
     <>
       <button
@@ -85,34 +91,42 @@ export function ScreenGroupActionsMenu({ group }: { group: ScreenGroup }) {
             </svg>
             Voir les écrans
           </button>
-          <button type="button" onClick={() => { close(); setEditOpen(true); }}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 text-left">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-            Modifier
-          </button>
-          <button type="button" onClick={() => { close(); setAssignPlaylistOpen(true); }}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 text-left">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m9 11 3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-            </svg>
-            Assigner playlist
-          </button>
-          <div style={{ height: 1, backgroundColor: 'var(--apple-separator)', margin: '2px 0' }} />
-          <button type="button" onClick={handleDelete} disabled={deleteMutation.isPending}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 text-left disabled:opacity-40">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
-            </svg>
-            Supprimer
-          </button>
+          {canWrite && (
+            <>
+              <button type="button" onClick={() => { close(); setEditOpen(true); }}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 text-left">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Modifier
+              </button>
+              <button type="button" onClick={() => { close(); setAssignPlaylistOpen(true); }}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 text-left">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m9 11 3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                </svg>
+                Assigner playlist
+              </button>
+            </>
+          )}
+          {canDelete && (
+            <>
+              <div style={{ height: 1, backgroundColor: 'var(--apple-separator)', margin: '2px 0' }} />
+              <button type="button" onClick={handleDelete} disabled={deleteMutation.isPending}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 text-left disabled:opacity-40">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
+                </svg>
+                Supprimer
+              </button>
+            </>
+          )}
         </div>,
         document.body,
       )}
 
-      {editOpen && <ScreenGroupFormModal group={group} onClose={() => setEditOpen(false)} />}
-      {assignPlaylistOpen && (
+      {editOpen && canWrite && <ScreenGroupFormModal group={group} onClose={() => setEditOpen(false)} />}
+      {assignPlaylistOpen && canWrite && (
         <ScreenGroupAssignPlaylistModal
           groupName={group.name}
           isPending={assignPlaylistMutation.isPending}

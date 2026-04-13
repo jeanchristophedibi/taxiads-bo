@@ -5,8 +5,10 @@ import type { Screen, ScreenStatus } from '../../domain/entities/screen';
 import { useScreensListQuery } from '../hooks/use-screens-list-query';
 import { toScreenRowVm } from '../view-models/screen-view-model';
 import { ScreenActionsMenu } from './screen-actions-menu';
+import { ScreenValidateAction } from './screen-validate-action';
 import { ScreenEditModal } from './screen-edit-modal';
 import { BulkBar } from './bulk-bar';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 function timeAgo(dateStr: string): string {
@@ -63,10 +65,16 @@ function ScreenCard({
   screen,
   checked,
   onToggle,
+  canWrite,
+  canBulkActions,
+  requestsOnly,
 }: {
   screen: Screen;
   checked: boolean;
   onToggle: () => void;
+  canWrite: boolean;
+  canBulkActions: boolean;
+  requestsOnly: boolean;
 }) {
   const vm = toScreenRowVm(screen);
   const [editOpen, setEditOpen] = useState(false);
@@ -84,14 +92,16 @@ function ScreenCard({
           </div>
 
           {/* Checkbox — top right */}
-          <label className="absolute top-2.5 right-2.5 z-10 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={checked}
-              onChange={onToggle}
-              className="rounded cursor-pointer accent-blue-500"
-            />
-          </label>
+          {canBulkActions && (
+            <label className="absolute top-2.5 right-2.5 z-10 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={onToggle}
+                className="rounded cursor-pointer accent-blue-500"
+              />
+            </label>
+          )}
 
           {/* Center content */}
           <div className="absolute inset-0 flex items-center justify-center">
@@ -142,22 +152,30 @@ function ScreenCard({
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2.5 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setEditOpen(true)}
-              className="text-xs font-medium transition-opacity"
-              style={{ color: 'var(--apple-blue)' }}
-            >
-              Modifier
-            </button>
-            <div className="ml-auto -mr-1">
-              <ScreenActionsMenu screen={screen} />
-            </div>
+            {!requestsOnly && canWrite && (
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                className="text-xs font-medium transition-opacity"
+                style={{ color: 'var(--apple-blue)' }}
+              >
+                Modifier
+              </button>
+            )}
+            {requestsOnly ? (
+              <div className="ml-auto">
+                <ScreenValidateAction screen={screen} variant="grid" />
+              </div>
+            ) : (
+              <div className="ml-auto -mr-1">
+                <ScreenActionsMenu screen={screen} />
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {editOpen && <ScreenEditModal screen={screen} onClose={() => setEditOpen(false)} />}
+      {editOpen && !requestsOnly && canWrite && <ScreenEditModal screen={screen} onClose={() => setEditOpen(false)} />}
     </>
   );
 }
@@ -166,12 +184,17 @@ function ScreenCard({
 interface Props {
   search?: string;
   status?: ScreenStatus;
+  excludeStatuses?: ScreenStatus[];
+  requestsOnly?: boolean;
   groupId?: string;
   page?: number;
   onPageChange?: (page: number) => void;
 }
 
-export function ScreensGrid({ search, status, groupId, page = 1, onPageChange }: Props) {
+export function ScreensGrid({ search, status, excludeStatuses, requestsOnly = false, groupId, page = 1, onPageChange }: Props) {
+  const { can } = useAuthPermissions();
+  const canBulkActions = !requestsOnly && can('screens.bulk_actions');
+  const canWrite = can('screens.write');
   const { data, isLoading, isError } = useScreensListQuery({ search, status, groupId, page, perPage: 20 });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -181,7 +204,7 @@ export function ScreensGrid({ search, status, groupId, page = 1, onPageChange }:
     return next;
   });
 
-  const screens = data?.ok ? data.value.data : [];
+  const screens = (data?.ok ? data.value.data : []).filter((screen) => !excludeStatuses?.includes(screen.status));
   const meta    = data?.ok ? data.value.meta : null;
 
   if (isLoading) {
@@ -219,7 +242,7 @@ export function ScreensGrid({ search, status, groupId, page = 1, onPageChange }:
 
   return (
     <>
-      {selectedKeys.length > 0 && (
+      {canBulkActions && selectedKeys.length > 0 && (
         <BulkBar selectedKeys={selectedKeys} onClear={() => setSelectedIds(new Set())} />
       )}
 
@@ -230,6 +253,9 @@ export function ScreensGrid({ search, status, groupId, page = 1, onPageChange }:
             screen={screen}
             checked={selectedIds.has(screen.id)}
             onToggle={() => toggle(screen.id)}
+            canWrite={canWrite}
+            canBulkActions={canBulkActions}
+            requestsOnly={requestsOnly}
           />
         ))}
       </div>

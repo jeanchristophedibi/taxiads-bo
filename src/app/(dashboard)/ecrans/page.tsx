@@ -1,13 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ScreensTable } from '@/modules/screens/presentation/components/screens-table';
 import { ScreensGrid } from '@/modules/screens/presentation/components/screens-grid';
 import { ScreenGroupsTable } from '@/modules/screen-groups/presentation/components/screen-groups-table';
 import type { ScreenStatus } from '@/modules/screens/domain/entities/screen';
+import { useKpisQuery } from '@/modules/dashboard/presentation/hooks/use-kpis-query';
+import { useScreensListQuery } from '@/modules/screens/presentation/hooks/use-screens-list-query';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 type ViewMode = 'table' | 'grid';
-type Tab = 'screens' | 'groups';
+type Tab = 'screens' | 'requests' | 'groups';
 
 const STATUS_FILTERS: { value: ScreenStatus | ''; label: string; dot?: string; active: string; inactive: string }[] = [
   { value: '',              label: 'Tous',           active: 'bg-slate-800 text-white',          inactive: 'bg-slate-100 text-slate-500 hover:bg-slate-200' },
@@ -18,7 +22,13 @@ const STATUS_FILTERS: { value: ScreenStatus | ''; label: string; dot?: string; a
 ];
 
 export default function EcransPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { can } = useAuthPermissions();
+  const { data: kpisData } = useKpisQuery();
+  const { data: pendingScreensData } = useScreensListQuery({ status: 'uninitialized', page: 1, perPage: 1 });
   const [tab, setTab] = useState<Tab>('screens');
+  const [tabReady, setTabReady] = useState(false);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<ScreenStatus | ''>('');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -26,7 +36,100 @@ export default function EcransPage() {
 
   const handleSearchChange = (value: string) => { setSearch(value); setPage(1); };
   const handleStatusChange = (value: ScreenStatus | '') => { setStatus(value); setPage(1); };
-  const handleTabChange = (t: Tab) => { setTab(t); setSearch(''); setStatus(''); setPage(1); };
+  const handleTabChange = (t: Tab) => {
+    setTab(t);
+    setSearch('');
+    setStatus('');
+    setPage(1);
+  };
+  const pendingCount = pendingScreensData?.ok
+    ? pendingScreensData.value.meta.total
+    : kpisData?.ok
+      ? (kpisData.value.devices?.pendingAccessRequests ?? kpisData.value.screens.uninitialized ?? 0)
+      : 0;
+  const isRequestsTab = tab === 'requests';
+  const effectiveStatus = isRequestsTab ? 'uninitialized' : status || undefined;
+  const excludedStatuses = !isRequestsTab && !status ? (['uninitialized'] as ScreenStatus[]) : undefined;
+
+  useEffect(() => {
+    const queryTab = searchParams.get('tab');
+    const nextTab: Tab = queryTab === 'requests' || queryTab === 'groups' ? queryTab : 'screens';
+    setTab((current) => (current === nextTab ? current : nextTab));
+    setTabReady(true);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === 'screens') params.delete('tab');
+    else params.set('tab', tab);
+
+    const next = params.toString();
+    router.replace(next ? `/ecrans?${next}` : '/ecrans');
+  }, [router, searchParams, tab]);
+
+  if (!can('screens.read')) {
+    return <div className="text-sm text-slate-500">Acces non autorise.</div>;
+  }
+
+  if (!tabReady) {
+    return (
+      <div className="space-y-6">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Écrans</h1>
+            <p className="text-sm text-slate-500 mt-0.5">Moniteur en temps réel des dispositifs d'affichage</p>
+          </div>
+        </div>
+
+        <div className="card overflow-hidden">
+          <div className="flex border-b border-slate-100">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="px-5 py-3">
+                <div className="skeleton h-4 w-24 rounded" />
+              </div>
+            ))}
+          </div>
+
+          <div className="toolbar">
+            <div className="skeleton h-10 w-full max-w-xs rounded-apple" />
+            <div className="flex items-center gap-1.5">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="skeleton h-7 w-20 rounded-apple" />
+              ))}
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="tbl-head">
+                  <th className="w-10" />
+                  <th>Écran</th>
+                  <th>Playlist</th>
+                  <th>Localisation</th>
+                  <th>Statut</th>
+                  <th>Dernier ping</th>
+                  <th className="w-12" />
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <tr key={index} className="border-b border-slate-100/80">
+                    <td className="px-4 py-4"><div className="w-4 h-4 skeleton rounded" /></td>
+                    {[140, 100, 80, 110, 90, 32].map((width, cellIndex) => (
+                      <td key={cellIndex} className="px-5 py-4">
+                        <div className="skeleton h-3.5 rounded" style={{ width }} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -49,6 +152,18 @@ export default function EcransPage() {
           </button>
           <button
             type="button"
+            onClick={() => handleTabChange('requests')}
+            className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${tab === 'requests' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+            <span className="inline-flex items-center gap-2">
+              Demandes
+              <span className={`inline-flex min-w-5 justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${tab === 'requests' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                {pendingCount}
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
             onClick={() => handleTabChange('groups')}
             className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${tab === 'groups' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
           >
@@ -56,7 +171,7 @@ export default function EcransPage() {
           </button>
         </div>
 
-        {tab === 'screens' && (
+        {(tab === 'screens' || tab === 'requests') && (
           <>
             <div className="toolbar">
               <div className="relative flex-1 max-w-xs">
@@ -65,26 +180,33 @@ export default function EcransPage() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Rechercher un écran…"
-                  value={search}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="input pl-9"
-                />
+                    placeholder={isRequestsTab ? 'Rechercher une demande…' : 'Rechercher un écran…'}
+                    value={search}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="input pl-9"
+                  />
               </div>
 
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {STATUS_FILTERS.map((f) => (
-                  <button
-                    key={f.value}
-                    type="button"
-                    onClick={() => handleStatusChange(f.value)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-apple text-xs font-medium transition-colors ${status === f.value ? f.active : f.inactive}`}
-                  >
-                    {f.dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${f.dot}`} />}
-                    {f.label}
-                  </button>
-                ))}
-              </div>
+              {isRequestsTab ? (
+                <div className="flex items-center gap-2 rounded-apple bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  Liste des demandes d'accès en attente de validation
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {STATUS_FILTERS.map((f) => (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => handleStatusChange(f.value)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-apple text-xs font-medium transition-colors ${status === f.value ? f.active : f.inactive}`}
+                    >
+                      {f.dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${f.dot}`} />}
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* View mode toggle */}
               <div className="ml-auto relative flex items-center bg-slate-100 rounded-apple p-0.5 gap-0">
@@ -124,9 +246,23 @@ export default function EcransPage() {
             </div>
 
             {viewMode === 'table' ? (
-              <ScreensTable search={search || undefined} status={status || undefined} page={page} onPageChange={setPage} />
+              <ScreensTable
+                search={search || undefined}
+                status={effectiveStatus}
+                excludeStatuses={excludedStatuses}
+                requestsOnly={isRequestsTab}
+                page={page}
+                onPageChange={setPage}
+              />
             ) : (
-              <ScreensGrid search={search || undefined} status={status || undefined} page={page} onPageChange={setPage} />
+              <ScreensGrid
+                search={search || undefined}
+                status={effectiveStatus}
+                excludeStatuses={excludedStatuses}
+                requestsOnly={isRequestsTab}
+                page={page}
+                onPageChange={setPage}
+              />
             )}
           </>
         )}

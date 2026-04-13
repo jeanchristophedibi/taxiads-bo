@@ -7,8 +7,10 @@ import { useToggleCreativeMutation, useDeleteCreativeMutation } from '../hooks/u
 import { CreativeEditModal } from './creative-edit-modal';
 import { useToast } from '@/shared/ui/toast-provider';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 export function CreativeActionsMenu({ creative }: { creative: Creative }) {
+  const { can } = useAuthPermissions();
   const toast = useToast();
   const confirm = useConfirm();
   const [open, setOpen] = useState(false);
@@ -74,6 +76,10 @@ export function CreativeActionsMenu({ creative }: { creative: Creative }) {
     });
   };
 
+  const canWrite = can('creatives.write');
+  const canDelete = can('creatives.delete');
+  if (!canWrite && !canDelete) return null;
+
   return (
     <>
       <button
@@ -94,47 +100,55 @@ export function CreativeActionsMenu({ creative }: { creative: Creative }) {
           style={{ position: 'fixed', top: dropPos.top, bottom: dropPos.bottom, right: dropPos.right, zIndex: 9999, minWidth: 180, maxHeight: dropPos.maxHeight, overflowY: dropPos.maxHeight ? 'auto' : undefined, borderColor: 'var(--apple-separator)' }}
           className="bg-white rounded-apple-lg border py-1 shadow-apple-lg"
         >
-          <button
-            type="button"
-            onClick={() => { close(); setEditOpen(true); }}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 text-left"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-            Modifier
-          </button>
-          <button
-            type="button"
-            onClick={handleToggle}
-            disabled={toggle.isPending}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 text-left disabled:opacity-40"
-          >
-            {creative.isActive ? (
-              <>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="5" height="14" x="3" y="5" /><rect width="5" height="14" x="16" y="5" /></svg>
-                Désactiver
-              </>
-            ) : (
-              <>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-                Activer
-              </>
-            )}
-          </button>
-          <div className="my-1 border-t" style={{ borderColor: 'var(--apple-separator)' }} />
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={del.isPending}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 text-left disabled:opacity-40"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" /></svg>
-            Supprimer
-          </button>
+          {canWrite && (
+            <>
+              <button
+                type="button"
+                onClick={() => { close(); setEditOpen(true); }}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 text-left"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                Modifier
+              </button>
+              <button
+                type="button"
+                onClick={handleToggle}
+                disabled={toggle.isPending}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 text-left disabled:opacity-40"
+              >
+                {creative.isActive ? (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="5" height="14" x="3" y="5" /><rect width="5" height="14" x="16" y="5" /></svg>
+                    Désactiver
+                  </>
+                ) : (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                    Activer
+                  </>
+                )}
+              </button>
+            </>
+          )}
+          {canDelete && (
+            <>
+              <div className="my-1 border-t" style={{ borderColor: 'var(--apple-separator)' }} />
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={del.isPending}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 text-left disabled:opacity-40"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" /></svg>
+                Supprimer
+              </button>
+            </>
+          )}
         </div>,
         document.body,
       )}
 
-      {editOpen && <CreativeEditModal creative={creative} onClose={() => setEditOpen(false)} />}
+      {editOpen && canWrite && <CreativeEditModal creative={creative} onClose={() => setEditOpen(false)} />}
     </>
   );
 }

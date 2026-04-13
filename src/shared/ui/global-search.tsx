@@ -4,41 +4,32 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { getAuthUserFromCookie, hasPermission } from '@/shared/application/auth-context';
 
 type GlobalScope = {
   key: string;
   label: string;
   route: string;
   optionResource: string;
+  permission: string;
 };
 
 type OptionItem = { key: string; value: string };
 type ScopeResult = GlobalScope & { items: OptionItem[] };
 
 const SCOPES: GlobalScope[] = [
-  { key: 'ecrans', label: 'Écrans', route: '/ecrans', optionResource: 'screens' },
-  { key: 'campagnes', label: 'Campagnes', route: '/campagnes', optionResource: 'campaigns' },
-  { key: 'playlists', label: 'Playlists', route: '/playlists', optionResource: 'playlists' },
-  { key: 'creatives', label: 'Créatives', route: '/creatives', optionResource: 'creatives' },
-  { key: 'annonceurs', label: 'Annonceurs', route: '/annonceurs', optionResource: 'advertisers' },
-  { key: 'localisations', label: 'Localisations', route: '/localisations', optionResource: 'locations' },
+  { key: 'ecrans', label: 'Écrans', route: '/ecrans', optionResource: 'screens', permission: 'screens.read' },
+  { key: 'campagnes', label: 'Campagnes', route: '/campagnes', optionResource: 'campaigns', permission: 'campaigns.read' },
+  { key: 'playlists', label: 'Playlists', route: '/playlists', optionResource: 'playlists', permission: 'playlists.read' },
+  { key: 'creatives', label: 'Créatives', route: '/creatives', optionResource: 'creatives', permission: 'creatives.read' },
+  { key: 'annonceurs', label: 'Annonceurs', route: '/annonceurs', optionResource: 'advertisers', permission: 'campaigns.read' },
+  { key: 'localisations', label: 'Localisations', route: '/localisations', optionResource: 'locations', permission: 'locations.read' },
 ];
 
 const getAuthToken = (): string | null => {
   if (typeof document === 'undefined') return null;
   const match = document.cookie.match(/(?:^|; )auth_token=([^;]*)/);
   return match ? decodeURIComponent(match[1]) : null;
-};
-
-const getAuthUser = (): { name: string; email: string; avatar_url?: string | null } | null => {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(/(?:^|; )auth_user=([^;]*)/);
-  if (!match) return null;
-  try {
-    return JSON.parse(decodeURIComponent(match[1])) as { name: string; email: string; avatar_url?: string | null };
-  } catch {
-    return null;
-  }
 };
 
 export function GlobalSearchBar() {
@@ -53,7 +44,7 @@ export function GlobalSearchBar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileDropdownPos, setProfileDropdownPos] = useState({ top: 0, right: 0 });
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string; avatar_url?: string | null } | null>(null);
+  const [user, setUser] = useState<ReturnType<typeof getAuthUserFromCookie>>(null);
   const [openPopup, setOpenPopup] = useState(false);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<ScopeResult[]>([]);
@@ -67,14 +58,19 @@ export function GlobalSearchBar() {
   }, [initialTerm, pathname]);
 
   useEffect(() => {
-    setUser(getAuthUser());
+    setUser(getAuthUserFromCookie());
   }, [pathname]);
 
   useEffect(() => {
-    const refresh = () => setUser(getAuthUser());
+    const refresh = () => setUser(getAuthUserFromCookie());
     window.addEventListener('auth-user-updated', refresh);
     return () => window.removeEventListener('auth-user-updated', refresh);
   }, []);
+
+  const allowedScopes = useMemo(() => {
+    const permissions = user?.permissions ?? [];
+    return SCOPES.filter((scope) => hasPermission(permissions, scope.permission));
+  }, [user?.permissions]);
 
   useEffect(() => {
     const onMouseDown = (event: MouseEvent) => {
@@ -130,7 +126,7 @@ export function GlobalSearchBar() {
 
       try {
         const fetched = await Promise.all(
-          SCOPES.map(async (scope) => {
+          allowedScopes.map(async (scope) => {
             const res = await fetch(`${base}/bo/options/${scope.optionResource}`, {
               headers: {
                 Accept: 'application/json',
@@ -160,7 +156,7 @@ export function GlobalSearchBar() {
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [term]);
+  }, [allowedScopes, term]);
 
   const initials = useMemo(() => {
     if (!user?.name) return '?';

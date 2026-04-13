@@ -339,6 +339,17 @@ export class HttpScreenRepository implements ScreenRepository {
     );
   }
 
+  async validateCode(validationCode: string) {
+    return wrap(
+      () => this.httpClient.request({
+        path: '/bo/devices/validate-code',
+        method: 'POST',
+        body: { validation_code: validationCode },
+      }).then(() => undefined),
+      'Failed to validate device code',
+    );
+  }
+
   async emergency(id: string, type: EmergencyType, payload?: CustomEmergencyPayload) {
     return wrap(
       () => this.httpClient.request({ path: `/bo/screens/${id}/emergency/${type}`, method: 'POST', body: payload }).then(() => undefined),

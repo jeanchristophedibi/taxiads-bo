@@ -6,8 +6,10 @@ import type { Playlist } from '../../domain/entities/playlist';
 import { PlaylistForm } from './playlist-form';
 import { PlaylistItemsModal } from './playlist-items-modal';
 import { PlaylistAssignModal } from './playlist-assign-modal';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 export function PlaylistActionsMenu({ playlist }: { playlist: Playlist }) {
+  const { can } = useAuthPermissions();
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [itemsOpen, setItemsOpen] = useState(false);
@@ -43,6 +45,7 @@ export function PlaylistActionsMenu({ playlist }: { playlist: Playlist }) {
   };
 
   const close = () => setOpen(false);
+  if (!can('playlists.write')) return null;
 
   return (
     <>

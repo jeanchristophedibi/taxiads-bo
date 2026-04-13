@@ -20,6 +20,13 @@ const getAuthToken = (): string | null => {
   return match ? decodeURIComponent(match[1]) : null;
 };
 
+const mapStatusToErrorCode = (status: number): 'FORBIDDEN' | 'NOT_FOUND' | 'VALIDATION' | 'NETWORK' => {
+  if (status === 403) return 'FORBIDDEN';
+  if (status === 404) return 'NOT_FOUND';
+  if (status === 422) return 'VALIDATION';
+  return 'NETWORK';
+};
+
 export class FetchHttpClient implements HttpClient {
   async request<T>(request: HttpRequest): Promise<T> {
     const url = `${env.apiBaseUrl}${request.path}${toQueryString(request.query)}`;
@@ -54,10 +61,30 @@ export class FetchHttpClient implements HttpClient {
     }
 
     if (!response.ok) {
-      throw new AppError('NETWORK', `HTTP ${response.status}`, {
-        status: response.status,
-        path: request.path,
-      });
+      let payload: unknown = null;
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      const backendMessage =
+        typeof payload === 'object' &&
+        payload !== null &&
+        'message' in payload &&
+        typeof (payload as { message?: unknown }).message === 'string'
+          ? (payload as { message: string }).message
+          : undefined;
+
+      throw new AppError(
+        mapStatusToErrorCode(response.status),
+        backendMessage ?? `HTTP ${response.status}`,
+        {
+          status: response.status,
+          path: request.path,
+          ...(typeof payload === 'object' && payload !== null ? payload : {}),
+        },
+      );
     }
 
     if (response.status === 204 || response.headers.get('content-length') === '0') {
