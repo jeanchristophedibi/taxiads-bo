@@ -56,6 +56,15 @@ export const useUpdateScreenStatusMutation = () => {
   });
 };
 
+export const useValidateDeviceCodeMutation = () => {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (validationCode: string) =>
+      useRepo().validateCode(validationCode),
+    onSuccess: invalidate,
+  });
+};
+
 export const useUpdateScreenMutation = () => {
   const invalidate = useInvalidate();
   return useMutation({

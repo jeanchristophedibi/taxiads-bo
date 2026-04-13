@@ -9,15 +9,19 @@ import {
   useRestartScreenMutation,
   useAssignPlaylistMutation,
   useUnassignPlaylistMutation,
-  useDeleteScreenMutation,
   useEmergencyMutation,
+  useValidateDeviceCodeMutation,
 } from '../hooks/use-screen-mutations';
 import { AssignPlaylistModal } from './assign-playlist-modal';
 import { ScreenEditModal } from './screen-edit-modal';
+import { ScreenLiveDetailsModal } from './screen-live-details-modal';
+import { ScreenValidationCodeModal } from './screen-validation-code-modal';
 import { useToast } from '@/shared/ui/toast-provider';
+import type { AppError } from '@/shared/domain/app-error';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-type ModalKind = 'assign-playlist' | 'edit' | 'custom-emergency' | null;
+type ModalKind = 'assign-playlist' | 'edit' | 'custom-emergency' | 'live-details' | 'validate-otp' | null;
 
 /* ─── Emergency labels ───────────────────────────────────────────────────── */
 const EMERGENCY_ACTIONS: { type: EmergencyType; label: string; icon: React.ReactNode; danger?: boolean }[] = [
@@ -137,10 +141,12 @@ function CustomEmergencyModal({
 
 /* ─── Main component ─────────────────────────────────────────────────────── */
 export function ScreenActionsMenu({ screen }: { screen: Screen }) {
+  const { can } = useAuthPermissions();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [modal, setModal] = useState<ModalKind>(null);
-  const [dropPos, setDropPos] = useState({ top: 0, right: 0 });
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [dropPos, setDropPos] = useState<{ top?: number; bottom?: number; right: number; maxHeight?: number }>({ top: 0, right: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
 
@@ -148,8 +154,8 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
   const restart     = useRestartScreenMutation();
   const assignPl    = useAssignPlaylistMutation();
   const unassignPl  = useUnassignPlaylistMutation();
-  const deleteSc    = useDeleteScreenMutation();
   const emergency   = useEmergencyMutation();
+  const validateCode = useValidateDeviceCodeMutation();
 
   /* Close on outside click */
   useEffect(() => {
@@ -163,17 +169,43 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  /* Open dropdown and calculate position */
+  /* Open dropdown — flip upward if not enough space below */
   const handleOpen = () => {
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setDropPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+      const right = window.innerWidth - rect.right;
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+
+      if (spaceBelow >= 300 || spaceBelow >= spaceAbove) {
+        setDropPos({ top: rect.bottom + 4, right, maxHeight: Math.min(440, spaceBelow) });
+      } else {
+        setDropPos({ bottom: window.innerHeight - rect.top + 4, right, maxHeight: Math.min(440, spaceAbove) });
+      }
     }
     setOpen(true);
   };
 
   const close = () => setOpen(false);
-  const openModal = (kind: ModalKind) => { close(); setModal(kind); };
+  const openModal = (kind: ModalKind) => {
+    close();
+    if (kind === 'validate-otp') setValidationError(null);
+    setModal(kind);
+  };
+
+  const extractValidationError = (error: unknown): string => {
+    const fallback = 'Code de validation invalide ou expire.';
+    if (!error || typeof error !== 'object') return fallback;
+
+    const appError = error as AppError;
+    const details = appError.details as { message?: string; errors?: { validation_code?: string[] } } | undefined;
+
+    const fieldMsg = details?.errors?.validation_code?.[0];
+    if (fieldMsg) return fieldMsg;
+    if (details?.message) return details.message;
+    if (appError.message) return appError.message;
+    return fallback;
+  };
 
   const handleAction = (label: string, mutate: () => Promise<unknown>) => {
     close();
@@ -198,6 +230,19 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
     });
   };
 
+  const canRead = can('screens.read');
+  const canWrite = can('screens.write');
+  const canAssign = can('screens.assign_playlist');
+  const canEmergency = can('screens.emergency');
+  const canRefresh = can('screens.bulk_refresh');
+  const canRestart = can('screens.bulk_restart');
+  const canValidate = can('devices.validate_code');
+  const canManage = canWrite || canAssign;
+  const canControl = canValidate || canRead || canRefresh || canRestart;
+  const hasAnyAction = canControl || canManage || canEmergency;
+
+  if (!hasAnyAction) return null;
+
   return (
     <>
       {/* Kebab button */}
@@ -217,74 +262,82 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
       {open && typeof document !== 'undefined' && createPortal(
         <div
           ref={dropRef}
-          style={{ position: 'fixed', top: dropPos.top, right: dropPos.right, zIndex: 9999, minWidth: 220, borderColor: 'var(--apple-separator)' }}
+          style={{ position: 'fixed', top: dropPos.top, bottom: dropPos.bottom, right: dropPos.right, zIndex: 9999, minWidth: 220, maxHeight: dropPos.maxHeight, overflowY: dropPos.maxHeight ? 'auto' : undefined, borderColor: 'var(--apple-separator)' }}
           className="bg-white rounded-apple-lg border py-1 shadow-apple-lg"
         >
-          <Section label="Contrôle">
-            <Item label="Actualiser" icon={
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></svg>
-            } onClick={() => handleAction('Actualisation envoyée', () => refresh.mutateAsync(screen.id))} disabled={refresh.isPending} />
-            <Item label="Redémarrer" icon={
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /></svg>
-            } onClick={() => handleAction('Redémarrage envoyé', () => restart.mutateAsync(screen.id))} disabled={restart.isPending} />
-          </Section>
+          {canControl && (
+            <Section label="Contrôle">
+              {canValidate && (
+                <Item label="Valider l'écran" icon={
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                } onClick={() => openModal('validate-otp')} disabled={screen.status !== 'uninitialized' || validateCode.isPending} />
+              )}
+              {canRead && (
+                <Item label="Détails live" icon={
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" /><circle cx="12" cy="12" r="3" /></svg>
+                } onClick={() => openModal('live-details')} />
+              )}
+              {canRefresh && (
+                <Item label="Actualiser" icon={
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></svg>
+                } onClick={() => handleAction('Actualisation envoyée', () => refresh.mutateAsync(screen.id))} disabled={refresh.isPending} />
+              )}
+              {canRestart && (
+                <Item label="Redémarrer" icon={
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /></svg>
+                } onClick={() => handleAction('Redémarrage envoyé', () => restart.mutateAsync(screen.id))} disabled={restart.isPending} />
+              )}
+            </Section>
+          )}
 
-          <div className="my-1 border-t" style={{ borderColor: 'var(--apple-separator)' }} />
+          {canManage && <div className="my-1 border-t" style={{ borderColor: 'var(--apple-separator)' }} />}
 
-          <Section label="Playlist">
-            <Item label="Définir la playlist" icon={
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M3 12h12M3 18h12M16 16l5-4-5-4v8z" /></svg>
-            } onClick={() => openModal('assign-playlist')} />
-            <Item label="Éteindre la diffusion" icon={
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="5" height="14" x="3" y="5" /><rect width="5" height="14" x="16" y="5" /></svg>
-            } onClick={() => handleAction('Diffusion arrêtée', () => unassignPl.mutateAsync(screen.id))} disabled={!screen.playlist || unassignPl.isPending} />
-          </Section>
+          {canManage && (
+            <Section label="Playlist">
+              {canAssign && (
+                <>
+                  <Item label="Définir la playlist" icon={
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M3 12h12M3 18h12M16 16l5-4-5-4v8z" /></svg>
+                  } onClick={() => openModal('assign-playlist')} />
+                  <Item label="Éteindre la diffusion" icon={
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="5" height="14" x="3" y="5" /><rect width="5" height="14" x="16" y="5" /></svg>
+                  } onClick={() => handleAction('Diffusion arrêtée', () => unassignPl.mutateAsync(screen.id))} disabled={!screen.playlist || unassignPl.isPending} />
+                </>
+              )}
+              {canWrite && (
+                <Item label="Modifier" icon={
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                } onClick={() => openModal('edit')} />
+              )}
+            </Section>
+          )}
 
-          <div className="my-1 border-t" style={{ borderColor: 'var(--apple-separator)' }} />
+          {canEmergency && <div className="my-1 border-t" style={{ borderColor: 'var(--apple-separator)' }} />}
 
-          <Section label="Urgence">
-            {EMERGENCY_ACTIONS.map((a) => (
-              <Item
-                key={a.type}
-                label={a.label}
-                icon={a.icon}
-                danger={a.danger}
-                onClick={() => {
-                  if (a.type === 'custom') { openModal('custom-emergency'); return; }
-                  close();
-                  handleEmergency(a.type);
-                }}
-                disabled={emergency.isPending}
-              />
-            ))}
-          </Section>
-
-          <div className="my-1 border-t" style={{ borderColor: 'var(--apple-separator)' }} />
-
-          <Section label="Gestion">
-            <Item label="Modifier" icon={
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-            } onClick={() => openModal('edit')} />
-            <Item label="Supprimer" danger icon={
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" /></svg>
-            } onClick={() => {
-              close();
-              if (!window.confirm(`Supprimer l'écran "${screen.name}" ?`)) return;
-              deleteSc.mutate(screen.id, {
-                onSuccess: (res) => {
-                  if (res && !res.ok) toast.error('Suppression', (res.error as { message: string })?.message);
-                  else toast.success('Écran supprimé');
-                },
-                onError: (err) => toast.error('Suppression', (err as Error).message),
-              });
-            }} disabled={deleteSc.isPending} />
-          </Section>
+          {canEmergency && (
+            <Section label="Urgence">
+              {EMERGENCY_ACTIONS.map((a) => (
+                <Item
+                  key={a.type}
+                  label={a.label}
+                  icon={a.icon}
+                  danger={a.danger}
+                  onClick={() => {
+                    if (a.type === 'custom') { openModal('custom-emergency'); return; }
+                    close();
+                    handleEmergency(a.type);
+                  }}
+                  disabled={emergency.isPending}
+                />
+              ))}
+            </Section>
+          )}
         </div>,
         document.body,
       )}
 
       {/* Modals */}
-      {modal === 'assign-playlist' && (
+      {modal === 'assign-playlist' && canAssign && (
         <AssignPlaylistModal
           onClose={() => setModal(null)}
           isPending={assignPl.isPending}
@@ -300,15 +353,45 @@ export function ScreenActionsMenu({ screen }: { screen: Screen }) {
         />
       )}
 
-      {modal === 'edit' && (
+      {modal === 'edit' && canWrite && (
         <ScreenEditModal screen={screen} onClose={() => setModal(null)} />
       )}
 
-      {modal === 'custom-emergency' && (
+      {modal === 'custom-emergency' && canEmergency && (
         <CustomEmergencyModal
           onClose={() => setModal(null)}
           isPending={emergency.isPending}
           onConfirm={(payload) => handleEmergency('custom', payload)}
+        />
+      )}
+
+      {modal === 'live-details' && canRead && (
+        <ScreenLiveDetailsModal screen={screen} onClose={() => setModal(null)} />
+      )}
+
+      {modal === 'validate-otp' && canValidate && (
+        <ScreenValidationCodeModal
+          title={`Valider ${screen.name}`}
+          subtitle="Entrez le code de validation (6 chiffres) pour activer cet ecran."
+          isPending={validateCode.isPending}
+          errorMessage={validationError}
+          onClose={() => setModal(null)}
+          onConfirm={(validationCode) => {
+            setValidationError(null);
+            validateCode.mutate(validationCode, {
+              onSuccess: (res) => {
+                if (res && !res.ok) {
+                  setValidationError(extractValidationError(res.error));
+                  return;
+                }
+                toast.success('Écran validé');
+                setModal(null);
+              },
+              onError: (err) => {
+                setValidationError(extractValidationError(err));
+              },
+            });
+          }}
         />
       )}
     </>

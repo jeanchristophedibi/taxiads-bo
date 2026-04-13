@@ -27,7 +27,7 @@ export function SelectField({ options, value, onChange, placeholder = '— Séle
       isClearable
       menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
       menuPosition="fixed"
-      styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+      styles={{ menuPortal: (base) => ({ ...base, zIndex: 11000 }) }}
       classNames={{
         control: (state) =>
           `min-h-[40px] border border-slate-300 rounded-md bg-white text-sm flex items-center

@@ -26,12 +26,12 @@ export function LocationsTable({ search, isActive, onEdit }: Props) {
 
   if (isLoading) {
     return (
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead><tr className="tbl-head">
           <th>Nom</th><th>Ville / Pays</th><th>Type</th><th>Statut</th><th>Utilisation</th>{onEdit && <th />}
         </tr></thead>
         <tbody>{Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)}</tbody>
-      </table>
+      </table></div>
     );
   }
 
@@ -62,7 +62,7 @@ export function LocationsTable({ search, isActive, onEdit }: Props) {
 
   return (
     <>
-      <table className="w-full">
+      <div className="overflow-x-auto"><table className="w-full">
         <thead>
           <tr className="tbl-head">
             <th>Nom</th>
@@ -121,7 +121,7 @@ export function LocationsTable({ search, isActive, onEdit }: Props) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
       <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
         <p className="text-xs text-slate-400">
           {data.value.meta.total} localisation{data.value.meta.total > 1 ? 's' : ''} au total

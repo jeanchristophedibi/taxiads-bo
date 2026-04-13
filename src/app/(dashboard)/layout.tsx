@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Sidebar } from '@/shared/ui/sidebar';
+import { SidebarProvider } from '@/shared/ui/sidebar-context';
+import { MobileTopBar } from '@/shared/ui/mobile-topbar';
 import { getServerApiOrigin } from '@/shared/config/server-api';
 import { GlobalSearchBar } from '@/shared/ui/global-search';
 
@@ -26,14 +28,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!(await isTokenValid(token))) redirect('/api/auth/clear');
 
   return (
-    <div className="dashboard-shell flex min-h-screen bg-apple-bg">
-      <Sidebar />
-      <main className="dashboard-content flex-1 min-w-0" style={{ marginLeft: 'var(--sidebar-w)' }}>
-        <GlobalSearchBar />
-        <div className="px-8 py-8 max-w-screen-xl mx-auto">
-          {children}
-        </div>
-      </main>
-    </div>
+    <SidebarProvider>
+      <div className="dashboard-shell flex min-h-screen bg-apple-bg">
+        <Sidebar />
+        <main className="dashboard-content flex-1 min-w-0">
+          <MobileTopBar />
+          <GlobalSearchBar />
+          <div className="px-4 py-5 md:px-8 md:py-8 max-w-screen-xl mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
+    </SidebarProvider>
   );
 }

@@ -4,14 +4,20 @@ import { useState } from 'react';
 import { AdvertisersTable } from '@/modules/advertisers/presentation/components/advertisers-table';
 import { AdvertiserForm } from '@/modules/advertisers/presentation/components/advertiser-form';
 import type { Advertiser } from '@/modules/advertisers/domain/entities/advertiser';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 export default function AnnonceursPage() {
+  const { can } = useAuthPermissions();
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<{ open: boolean; advertiser?: Advertiser }>({ open: false });
 
   const openCreate = () => setModal({ open: true, advertiser: undefined });
   const openEdit = (advertiser: Advertiser) => setModal({ open: true, advertiser });
   const closeModal = () => setModal({ open: false });
+
+  if (!can('campaigns.read')) {
+    return <div className="text-sm text-slate-500">Acces non autorise.</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -20,12 +26,14 @@ export default function AnnonceursPage() {
           <h1 className="page-title">Annonceurs</h1>
           <p className="text-sm text-slate-500 mt-0.5">Gérez vos annonceurs et leurs campagnes associées</p>
         </div>
-        <button onClick={openCreate} className="btn-primary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Nouvel annonceur
-        </button>
+        {can('campaigns.write') && (
+          <button onClick={openCreate} className="btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Nouvel annonceur
+          </button>
+        )}
       </div>
 
       <div className="card overflow-hidden">
@@ -43,10 +51,10 @@ export default function AnnonceursPage() {
             />
           </div>
         </div>
-        <AdvertisersTable search={search || undefined} onEdit={openEdit} />
+        <AdvertisersTable search={search || undefined} onEdit={can('campaigns.write') ? openEdit : undefined} />
       </div>
 
-      {modal.open && <AdvertiserForm advertiser={modal.advertiser} onClose={closeModal} />}
+      {modal.open && can('campaigns.write') && <AdvertiserForm advertiser={modal.advertiser} onClose={closeModal} />}
     </div>
   );
 }

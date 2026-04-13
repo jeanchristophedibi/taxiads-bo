@@ -8,7 +8,9 @@
     "dev:clean": "rm -rf .next && next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.7",
@@ -19,6 +21,7 @@
     "react-dom": "^19.2.4",
     "react-hook-form": "^7.54.2",
     "react-leaflet": "^5.0.0",
+    "react-qr-code": "^2.0.18",
     "react-select": "^5.10.2",
     "zod": "^3.24.1"
   },
@@ -31,6 +34,7 @@
     "eslint-config-next": "15.5.12",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }

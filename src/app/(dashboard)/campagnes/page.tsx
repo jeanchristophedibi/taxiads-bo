@@ -6,6 +6,7 @@ import { CampaignsTable } from '@/modules/campaigns/presentation/components/camp
 import { CampaignForm } from '@/modules/campaigns/presentation/components/campaign-form';
 import { CampaignTargetingModal } from '@/modules/campaigns/presentation/components/campaign-targeting-modal';
 import type { Campaign, CampaignStatus } from '@/modules/campaigns/domain/entities/campaign';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 const STATUSES: { value: CampaignStatus | ''; label: string }[] = [
   { value: '', label: 'Tous les statuts' },
@@ -20,6 +21,7 @@ const STATUSES: { value: CampaignStatus | ''; label: string }[] = [
 const VALID_STATUSES = new Set(['active', 'scheduled', 'draft', 'paused', 'completed', 'archived']);
 
 export default function CampagnesPage() {
+  const { can } = useAuthPermissions();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -77,6 +79,10 @@ export default function CampagnesPage() {
     updateUrl({ page: nextPage });
   };
 
+  if (!can('campaigns.read')) {
+    return <div className="text-sm text-slate-500">Acces non autorise.</div>;
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -85,12 +91,14 @@ export default function CampagnesPage() {
           <h1 className="page-title">Campagnes</h1>
           <p className="text-sm text-slate-500 mt-0.5">Gérez et suivez vos campagnes publicitaires</p>
         </div>
-        <button onClick={() => setModal({ open: true })} className="btn-primary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Nouvelle campagne
-        </button>
+        {can('campaigns.write') && (
+          <button onClick={() => setModal({ open: true })} className="btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Nouvelle campagne
+          </button>
+        )}
       </div>
 
       {/* Card with toolbar + table */}
@@ -124,15 +132,15 @@ export default function CampagnesPage() {
           status={status || undefined}
           page={page}
           onPageChange={onPageChange}
-          onEdit={(c) => setModal({ open: true, campaign: c })}
-          onTargeting={(c) => setTargeting({ open: true, campaign: c })}
+          onEdit={can('campaigns.write') ? (c) => setModal({ open: true, campaign: c }) : undefined}
+          onTargeting={can('campaigns.write') ? (c) => setTargeting({ open: true, campaign: c }) : undefined}
         />
       </div>
 
-      {modal.open && (
+      {modal.open && can('campaigns.write') && (
         <CampaignForm campaign={modal.campaign} onClose={() => setModal({ open: false })} />
       )}
-      {targeting.open && targeting.campaign && (
+      {targeting.open && targeting.campaign && can('campaigns.write') && (
         <CampaignTargetingModal campaign={targeting.campaign} onClose={() => setTargeting({ open: false })} />
       )}
     </div>

@@ -5,8 +5,11 @@ import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { usePlaylistDetailQuery } from '@/modules/playlists/presentation/hooks/use-playlist-detail-query';
 import { usePlaylistItemsQuery } from '@/modules/playlists/presentation/hooks/use-playlist-items';
+import { PlaylistItemsModal } from '@/modules/playlists/presentation/components/playlist-items-modal';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 export default function PlaylistDetailPage() {
+  const { can } = useAuthPermissions();
   const params = useParams<{ id: string }>();
   const id = params?.id;
 
@@ -16,6 +19,7 @@ export default function PlaylistDetailPage() {
   const detail = detailResult && detailResult.ok ? detailResult.value : null;
   const items = itemsData?.items ?? [];
   const [search, setSearch] = useState('');
+  const [itemsModalOpen, setItemsModalOpen] = useState(false);
 
   const filteredItems = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -31,6 +35,10 @@ export default function PlaylistDetailPage() {
     });
   }, [items, search]);
 
+  if (!can('playlists.read')) {
+    return <div className="text-sm text-slate-500">Acces non autorise.</div>;
+  }
+
   if (loadingDetail) {
     return <div className="text-sm text-slate-400">Chargement du détail playlist…</div>;
   }
@@ -40,15 +48,30 @@ export default function PlaylistDetailPage() {
   }
 
   return (
+    <>
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">{detail.name}</h1>
           <p className="text-xs text-slate-500 mt-1">Détail playlist</p>
         </div>
-        <Link href="/playlists" className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-          Retour playlists
-        </Link>
+        <div className="flex items-center gap-2">
+          {can('playlists.write') && (
+            <button
+              type="button"
+              onClick={() => setItemsModalOpen(true)}
+              className="btn-primary"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18M3 12h12M3 18h12M16 16l5-4-5-4v8z" />
+              </svg>
+              Gérer les items
+            </button>
+          )}
+          <Link href="/playlists" className="btn-secondary">
+            Retour
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -121,5 +144,13 @@ export default function PlaylistDetailPage() {
         )}
       </div>
     </div>
+
+    {itemsModalOpen && can('playlists.write') && (
+      <PlaylistItemsModal
+        playlist={{ id: detail.id, name: detail.name }}
+        onClose={() => setItemsModalOpen(false)}
+      />
+    )}
+    </>
   );
 }

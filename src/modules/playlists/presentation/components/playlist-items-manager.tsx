@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { SelectField } from '@/shared/ui/select-field';
 import { useOptionsQuery } from '@/shared/application/use-options-query';
 import {
@@ -48,6 +49,7 @@ export function PlaylistItemsManager() {
   const { data: layouts = [], isLoading: loadingLayouts } = useOptionsQuery('layouts');
   const { data: creatives = [], isLoading: loadingCreatives } = useOptionsQuery('creatives');
 
+  const confirm = useConfirm();
   const createMutation = useCreatePlaylistItemMutation(playlistId);
   const updateMutation = useUpdatePlaylistItemMutation(playlistId);
   const deleteMutation = useDeletePlaylistItemMutation(playlistId);
@@ -99,10 +101,9 @@ export function PlaylistItemsManager() {
     createMutation.mutate(payload, { onSuccess: clearForm });
   };
 
-  const onDelete = (itemId: string) => {
+  const onDelete = async (itemId: string) => {
     if (!playlistId) return;
-    const confirmed = window.confirm('Supprimer cet item playlist ? Cette action est irreversible.');
-    if (!confirmed) return;
+    if (!await confirm({ title: 'Supprimer cet item ?', message: 'Cette action est irréversible.', confirmLabel: 'Supprimer', danger: true })) return;
     deleteMutation.mutate(itemId);
   };
 

@@ -4,10 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PlaylistsTable } from '@/modules/playlists/presentation/components/playlists-table';
 import { PlaylistForm } from '@/modules/playlists/presentation/components/playlist-form';
-import { PlaylistItemsModal } from '@/modules/playlists/presentation/components/playlist-items-modal';
-import type { Playlist } from '@/modules/playlists/domain/entities/playlist';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 export default function PlaylistsPage() {
+  const { can } = useAuthPermissions();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -18,9 +18,7 @@ export default function PlaylistsPage() {
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [search, setSearch] = useState(initialSearch);
   const [page, setPage] = useState(initialPage);
-
-  const [modal, setModal] = useState<{ open: boolean; playlist?: Playlist }>({ open: false });
-  const [itemsModal, setItemsModal] = useState<{ open: boolean; playlist?: Playlist }>({ open: false });
+  const [createOpen, setCreateOpen] = useState(false);
 
   const updateUrl = useMemo(() => {
     return (next: { search?: string; page?: number }) => {
@@ -52,24 +50,31 @@ export default function PlaylistsPage() {
     updateUrl({ page: nextPage });
   };
 
+  if (!can('playlists.read')) {
+    return <div className="text-sm text-slate-500">Acces non autorise.</div>;
+  }
+
   return (
+    <>
     <div className="space-y-6">
       <div className="page-header">
         <div>
           <h1 className="page-title">Playlists</h1>
           <p className="text-sm text-slate-500 mt-0.5">Organisez vos contenus publicitaires en playlists</p>
         </div>
-        <button onClick={() => setModal({ open: true })} className="btn-primary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Nouvelle playlist
-        </button>
+        {can('playlists.write') && (
+          <button type="button" onClick={() => setCreateOpen(true)} className="btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Nouvelle playlist
+          </button>
+        )}
       </div>
 
       <div className="card overflow-hidden">
         <div className="toolbar">
-          <div className="relative flex-1 max-w-xs">
+          <div className="relative w-72 shrink-0">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="7" /><path d="m21 21-4.35-4.35" />
             </svg>
@@ -87,17 +92,11 @@ export default function PlaylistsPage() {
           search={search || undefined}
           page={page}
           onPageChange={onPageChange}
-          onEdit={(p) => setModal({ open: true, playlist: p })}
-          onItems={(p) => setItemsModal({ open: true, playlist: p })}
         />
       </div>
-
-      {modal.open && (
-        <PlaylistForm playlist={modal.playlist} onClose={() => setModal({ open: false })} />
-      )}
-      {itemsModal.open && itemsModal.playlist && (
-        <PlaylistItemsModal playlist={itemsModal.playlist} onClose={() => setItemsModal({ open: false })} />
-      )}
     </div>
+
+    {createOpen && can('playlists.write') && <PlaylistForm onClose={() => setCreateOpen(false)} />}
+    </>
   );
 }

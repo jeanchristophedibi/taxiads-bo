@@ -3,6 +3,7 @@ export interface HttpRequest {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   query?: Record<string, string | number | boolean | undefined>;
   body?: unknown;
+  formData?: FormData;
   headers?: Record<string, string>;
 }
 

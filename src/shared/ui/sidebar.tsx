@@ -3,6 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { useSidebar } from './sidebar-context';
+import { env } from '@/shared/config/env';
+import { fetchDocsLinks } from '@/modules/docs/infrastructure/fetch-docs-links';
+import { trackDocsLinkClick } from '@/modules/docs/presentation/lib/track-docs-link-click';
+import { resolveDocumentationUrl } from '@/modules/docs/presentation/lib/resolve-documentation-url';
+import { getDocsFallbackUrl } from '@/modules/docs/domain/docs-links';
+import { useAuthPermissions } from '@/shared/application/use-auth-permissions';
 
 /* ─── Icons ─────────────────────────────────────────────────────────────── */
 const icons = {
@@ -21,6 +28,11 @@ const icons = {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" />
       <path d="m21 15-5-5L5 21" />
+    </svg>
+  ),
+  artworks: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" />
     </svg>
   ),
   campaigns: (
@@ -75,38 +87,69 @@ const icons = {
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
     </svg>
   ),
+  announcements: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11l19-9-9 19-2-8-8-2z" />
+    </svg>
+  ),
+  programs: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  ),
   profile: (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
     </svg>
   ),
+  documentation: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  ),
 };
 
 /* ─── Nav definition ─────────────────────────────────────────────────────── */
-type NavLink = { href: string; label: string; icon: React.ReactNode };
+type NavLink = { href: string; label: string; icon: React.ReactNode; permission?: string };
 type NavGroup = { label: string; icon?: React.ReactNode; children: NavLink[] };
 
 const NAV: NavGroup[] = [
   {
     label: 'Dashboard',
-    children: [{ href: '/dashboard', label: 'Dashboard', icon: icons.dashboard }],
+    children: [{ href: '/dashboard', label: 'Dashboard', icon: icons.dashboard, permission: 'dashboard.read' }],
   },
   {
     label: 'Diffusion',
     children: [
-      { href: '/ecrans',     label: 'Écrans',       icon: icons.screens },
-      { href: '/creatives',  label: 'Créatives',    icon: icons.creatives },
-      { href: '/campagnes',  label: 'Campagnes',    icon: icons.campaigns },
-      { href: '/playlists',  label: 'Playlists',    icon: icons.playlists },
-      { href: '/play-logs',  label: 'Historique',   icon: icons.history },
-      { href: '/carte',      label: 'Carte',        icon: icons.map },
+      { href: '/ecrans',     label: 'Écrans',       icon: icons.screens, permission: 'screens.read' },
+      { href: '/creatives',  label: 'Créatives',    icon: icons.creatives, permission: 'creatives.read' },
+      { href: '/artworks',   label: 'Artworks',     icon: icons.artworks, permission: 'creatives.read' },
+      { href: '/campagnes',  label: 'Campagnes',    icon: icons.campaigns, permission: 'campaigns.read' },
+      { href: '/playlists',  label: 'Playlists',    icon: icons.playlists, permission: 'playlists.read' },
+      { href: '/play-logs',  label: 'Historique',   icon: icons.history, permission: 'audit.read' },
+      { href: '/carte',      label: 'Carte',        icon: icons.map, permission: 'locations.read' },
+    ],
+  },
+  {
+    label: 'Communication',
+    children: [
+      { href: '/annonces', label: 'Annonces', icon: icons.announcements, permission: 'announcements.read' },
+      { href: '/programmes', label: 'Programmes', icon: icons.programs, permission: 'schedule.read' },
     ],
   },
   {
     label: 'Ressources',
     children: [
-      { href: '/annonceurs',    label: 'Annonceurs',    icon: icons.advertisers },
-      { href: '/localisations', label: 'Localisations', icon: icons.locations },
+      { href: '/annonceurs',    label: 'Annonceurs',    icon: icons.advertisers, permission: 'campaigns.read' },
+      { href: '/localisations', label: 'Localisations', icon: icons.locations, permission: 'locations.read' },
+    ],
+  },
+  {
+    label: 'Aide',
+    children: [
+      { href: '/aide', label: 'Aide', icon: icons.documentation },
     ],
   },
 ];
@@ -118,10 +161,42 @@ const isActivePath = (pathname: string, href: string) =>
 /* ─── Component ──────────────────────────────────────────────────────────── */
 export function Sidebar() {
   const pathname = usePathname();
+  const { can } = useAuthPermissions();
+  const { isOpen, close } = useSidebar();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [openingDocs, setOpeningDocs] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => { setIsProfileOpen(false); }, [pathname]);
+  const openDocumentation = async () => {
+    if (openingDocs) return;
+    setOpeningDocs(true);
+
+    const popup = typeof window !== 'undefined'
+      ? window.open('about:blank', '_blank', 'noopener,noreferrer')
+      : null;
+
+    const navigate = (url: string) => {
+      if (popup) {
+        popup.location.href = url;
+        return;
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+    };
+
+    try {
+      const resolved = await resolveDocumentationUrl(fetchDocsLinks, getDocsFallbackUrl(env.apiBaseUrl));
+      trackDocsLinkClick({
+        source: 'sidebar',
+        key: resolved.fallback ? 'fallback_local_docs' : 'documentation_main',
+        url: resolved.url,
+      });
+      navigate(resolved.url);
+    } finally {
+      setOpeningDocs(false);
+    }
+  };
+
+  useEffect(() => { setIsProfileOpen(false); close(); }, [pathname, close]);
 
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
@@ -132,10 +207,22 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside
-      className="fixed inset-y-0 left-0 flex flex-col z-40 sidebar-glass"
-      style={{ width: 'var(--sidebar-w)' }}
-    >
+    <>
+      {/* Mobile overlay — closes sidebar on tap outside */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={close}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 flex flex-col z-40 sidebar-glass transition-transform duration-300 ease-[var(--ease-apple)] ${
+          isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+        style={{ width: 'var(--sidebar-w)' }}
+      >
       {/* ── Logo ─────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2.5 px-5 h-16 border-b border-white/5 shrink-0">
         <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
@@ -154,10 +241,12 @@ export function Sidebar() {
       {/* ── Nav ──────────────────────────────────────────────────────── */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {NAV.map((group) => {
+          const visibleChildren = group.children.filter((child) => !child.permission || can(child.permission));
+          if (visibleChildren.length === 0) return null;
 
           /* Single-item group → direct link */
-          if (group.children.length === 1) {
-            const only = group.children[0];
+          if (visibleChildren.length === 1) {
+            const only = visibleChildren[0];
             const active = isActivePath(pathname, only.href);
             return (
               <Link
@@ -184,7 +273,7 @@ export function Sidebar() {
                 {group.label}
               </p>
 
-              {group.children.map((child, idx) => {
+              {visibleChildren.map((child, idx) => {
                 const active = isActivePath(pathname, child.href);
                 return (
                   <Link
@@ -210,6 +299,16 @@ export function Sidebar() {
             </div>
           );
         })}
+
+        <button
+          type="button"
+          onClick={() => void openDocumentation()}
+          disabled={openingDocs}
+          className="mt-4 w-full animate-nav-item flex items-center gap-3 px-3 py-2.5 rounded-apple text-sm font-medium transition-all duration-200 ease-apple text-white/50 hover:text-white/80 hover:bg-white/5 disabled:opacity-50"
+        >
+          <span className="text-white/40">{icons.documentation}</span>
+          Documentation
+        </button>
       </nav>
 
       {/* ── Profile ──────────────────────────────────────────────────── */}
@@ -261,6 +360,7 @@ export function Sidebar() {
           )}
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
