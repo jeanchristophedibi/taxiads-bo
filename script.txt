@@ -1,9 +1,0 @@
-Il y a plusieurs problèmes à corriger sur le back-office TaxiAds.
-
-1. Lors de la déconnexion, la redirection envoie vers `https://taxiads-bo.vercel.app/api/logout` au lieu de revenir vers une page de connexion ou d’accueil. Il faut corriger le flow de logout.
-
-2. Le flow de validation des écrans en statut `request` semble incohérent entre le back-office et l’API. La logique actuelle est à revoir.
-
-3. Le panneau Filament n’est pas aligné avec la logique actuelle de validation par code. Il faut le mettre à jour pour qu’il reflète correctement le nouveau fonctionnement.
-
-Objectif : revoir entièrement le flow de validation d’un écran/device, du back-office jusqu’au backend et à Filament, afin d’avoir une logique cohérente, fonctionnelle et à jour.
